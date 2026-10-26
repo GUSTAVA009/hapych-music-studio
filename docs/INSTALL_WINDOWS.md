@@ -132,6 +132,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Diagnose-Windows.p
 - `git / uv / ffmpeg не распознано`: установи программу, открой новый PowerShell и проверь переменную PATH.
 - `No pyproject.toml found`: это ошибка старого установщика `git clone --no-checkout`. Теперь исправлено. Выполни `git pull --ff-only` и снова запусти установку — ничего вручную удалять не надо.
 - `git.exe : error: patch failed: svc/pipeline.py:89`: ошибка старой проверки патча ApexSVC при переустановке или при Windows CRLF. Обнови Git-копию командой `git pull --ff-only` и повтори установку. Новый проверяющий модуль безопасно восстанавливает отсутствующие части патча и не удаляет модели.
+- `No solution found` и `certifi==2026.10.19` во время установки Voice Engine: в прежней версии `--extra-index-url` заставлял uv использовать индекс PyTorch для всех Python-пакетов. Исправление: PyPI — основной индекс, а `--torch-backend cu121` маршрутизирует только PyTorch-пакеты к CUDA 12.1. В папке Music Studio выполни `git pull --ff-only`, затем снова запусти установщик. Не удаляй уже установленные компоненты. Этот шаг проверяется автоматически на чистом Windows Python 3.11 в GitHub Actions.
 - `Model download failed`: проверь интернет, свободное место и доступ к Hugging Face / Google Drive.
 - `CUDA out of memory`: освободи VRAM, используй режим с offload, снизь объём модели.
 - `Voice model / checkpoint missing`: запусти установку с `-Full -DownloadModels` и проверь лицензии голосовых банков.

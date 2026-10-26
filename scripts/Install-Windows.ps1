@@ -144,8 +144,16 @@ if($Full){
   if(-not(Test-Path $voicePython)){
     Invoke-Step 'Create voice-engine venv' { & uv venv --python 3.11 $voiceEnv }
   }
-  Invoke-Step 'Install pinned voice-engine packages + CUDA 12.8' {
-    & uv pip install --python $voicePython --extra-index-url 'https://download.pytorch.org/whl/cu121' -r (Join-Path $repo 'requirements\voice-engine-win-lock.txt')
+  $uvPipHelp = (& uv pip install --help | Out-String)
+  if($uvPipHelp -notmatch '--torch-backend'){
+    throw "uv is outdated: the --torch-backend option is required. Update it with 'winget upgrade --id astral-sh.uv -e', then rerun setup."
+  }
+  # Use PyPI for normal packages, e.g. certifi, and the official PyTorch
+  # CUDA 12.1 index ONLY for torch, torchvision and torchaudio.
+  # uv's --extra-index-url takes precedence and can select a stale certifi
+  # before checking PyPI. Keep dependency-confusion protection enabled.
+  Invoke-Step 'Install pinned voice-engine packages (PyPI + PyTorch CUDA 12.1)' {
+    & uv pip install --python $voicePython --default-index 'https://pypi.org/simple' --torch-backend cu121 -r (Join-Path $repo 'requirements\voice-engine-win-lock.txt')
   }
   Invoke-Step 'Install Python 3.10 for ApexSVC' { & uv python install 3.10 }
   Push-Location $apex

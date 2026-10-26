@@ -39,6 +39,17 @@ jobs:
             $errorsTotal+=@($errors).Count
           }
           if($errorsTotal){throw "Windows PowerShell syntax errors: $errorsTotal"}
+      - name: Resolve voice dependencies from PyPI and official PyTorch CUDA 12.1 on clean Windows
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check uv==0.13.5
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:UV_NO_PROGRESS = '1'
+          $venv = Join-Path $env:RUNNER_TEMP 'hapych-voice-index-qa'
+          uv venv --python 3.11 $venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          uv pip install --dry-run --python (Join-Path $venv 'Scripts\python.exe') --default-index https://pypi.org/simple --torch-backend cu121 -r requirements/voice-engine-win-lock.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build ZIP, check CRC, extract and verify SHA-256 of all files
         shell: pwsh
         run: python tools/build_source_archive.py --output "$env:RUNNER_TEMP\HAPYCH-MusicStudio-Source.zip" --verify
