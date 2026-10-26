@@ -49,6 +49,9 @@ jobs:
       - name: 'Regression: restore --no-checkout upstream checkout'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Installer-Recovery.ps1
+      - name: 'Regression: ZIP installer reuses an existing Git installation without overwriting songs'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Bootstrap-Existing-Git.ps1
       - name: Upload source-only ZIP from passing checks
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4

@@ -10,10 +10,13 @@ param(
   [switch]$DownloadModels,
   [switch]$NoPrerequisites,
   [switch]$NoLaunch,
-  [switch]$ValidateOnly
+  [switch]$ValidateOnly,
+  [switch]$SyncOnly,
+  [string]$TargetRoot
 )
 $ErrorActionPreference='Stop'
 function Refresh-Path {
+  $current=$env:Path
   $machine=[Environment]::GetEnvironmentVariable('Path','Machine')
   $user=[Environment]::GetEnvironmentVariable('Path','User')
   $extra=@(
@@ -22,7 +25,7 @@ function Refresh-Path {
     "$env:USERPROFILE\.local\bin",
     "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
   )
-  $env:Path=($machine+';'+$user+';'+($extra -join ';'))
+  $env:Path=($current+';'+$machine+';'+$user+';'+($extra -join ';'))
 }
 function Program-Found([string]$name) {
   Refresh-Path
@@ -32,7 +35,7 @@ if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT){
   throw 'HAPYCH Music Studio installer currently supports Windows 10/11 x64 only.'
 }
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..')).TrimEnd('\')
-$target=[IO.Path]::GetFullPath((Join-Path $HOME 'Music Studio')).TrimEnd('\')
+$target=if($TargetRoot){[IO.Path]::GetFullPath($TargetRoot).TrimEnd('\')}else{[IO.Path]::GetFullPath((Join-Path $HOME 'Music Studio')).TrimEnd('\')}
 if($ValidateOnly){
   foreach($entry in @('scripts\Install-Windows.ps1','scripts\Verify-Install.ps1','app\studio_server.py','third_party_versions.json')){
     if(-not(Test-Path (Join-Path $root $entry))){throw "Incomplete ZIP or Git checkout: $entry"}
@@ -42,20 +45,72 @@ if($ValidateOnly){
   Write-Host "Target: $target"
   exit 0
 }
+# When launched from a newly extracted GitHub ZIP, reuse and update an
+# existing official Git checkout instead of refusing to install. Never delete
+# the target, replace personal tracks, or run git reset --hard.
+if($SyncOnly -and $root -ieq $target){
+  Write-Host '[PASS] Already in the installed Music Studio folder; sync-only requested, no changes made.' -ForegroundColor Green
+  exit 0
+}
 if($root -ine $target){
-  if(Test-Path -LiteralPath $target){
-    throw "Music Studio already exists at '$target'. To protect data, the installer will not overwrite it. Run this project's setup from that folder instead."
+  $targetExists=Test-Path -LiteralPath $target -PathType Container
+  if($targetExists -and (Test-Path (Join-Path $target '.git'))){
+    if(-not(Program-Found 'git')){
+      throw "Git is needed to update the existing Music Studio. Install Git for Windows, then rerun Install.cmd."
+    }
+    $origin=(& git -C $target remote get-url origin).Trim()
+    if($LASTEXITCODE -ne 0){throw "Cannot read Git origin from existing Music Studio. No files were changed."}
+    $official=@(
+      'https://github.com/GUSTAVA009/hapych-music-studio.git',
+      'https://github.com/GUSTAVA009/hapych-music-studio',
+      'git@github.com:GUSTAVA009/hapych-music-studio.git',
+      'git@github.com:GUSTAVA009/hapych-music-studio'
+    )
+    if($official -notcontains $origin){
+      throw "Existing Music Studio uses a different Git origin ($origin). Refusing to replace somebody else's project."
+    }
+    $branch=(& git -C $target symbolic-ref --quiet --short HEAD).Trim()
+    if($LASTEXITCODE -ne 0 -or $branch -ne 'main'){
+      throw "Existing Music Studio is not on the main branch. Switch to main safely before updating; no changes made."
+    }
+    $modified=@(& git -C $target status --porcelain --untracked-files=no)
+    if($LASTEXITCODE -ne 0){throw 'Cannot inspect the existing Git checkout. No changes made.'}
+    if($modified.Count){
+      throw "Existing Music Studio has edited tracked files. Save or commit them first; automatic updates are blocked to protect your changes."
+    }
+    Write-Host "Official Music Studio already installed: $target" -ForegroundColor Cyan
+    Write-Host 'Updating the Git source with fast-forward only. User songs/models will be preserved.' -ForegroundColor Cyan
+    & git -C $target pull --ff-only origin main
+    if($LASTEXITCODE -ne 0){throw 'Safe fast-forward Git update failed. Existing files were preserved.'}
+    if($SyncOnly){
+      Write-Host '[PASS] Existing Git installation updated without running model downloads.' -ForegroundColor Green
+      exit 0
+    }
+  }elseif($targetExists){
+    $existing=@(Get-ChildItem -LiteralPath $target -Force)
+    if($existing.Count -eq 0){
+      if($SyncOnly){throw "No Git repository exists at $target. Nothing to update."}
+      Write-Host "Existing Music Studio folder is empty; copying source files without overwriting any data." -ForegroundColor Yellow
+      Get-ChildItem -LiteralPath $root -Force | Copy-Item -Destination $target -Recurse -ErrorAction Stop
+    }else{
+      throw "Music Studio already contains files but is not a Git checkout: $target. No files were overwritten. Back up or rename this folder first, then rerun Install.cmd."
+    }
+  }else{
+    if($SyncOnly){throw "No existing Music Studio Git repository at $target. Nothing to update."}
+    Write-Host "Moving extracted GitHub ZIP to the required folder: $target" -ForegroundColor Cyan
+    Move-Item -LiteralPath $root -Destination $target -ErrorAction Stop
   }
-  Write-Host "Moving extracted GitHub ZIP to the required folder: $target" -ForegroundColor Cyan
-  Move-Item -LiteralPath $root -Destination $target -ErrorAction Stop
+  # The target is now the up-to-date source tree, not the ZIP on Desktop.
   $next=Join-Path $target 'scripts\Bootstrap-Windows.ps1'
+  if(-not(Test-Path $next)){throw 'Music Studio Git update did not produce the expected Bootstrap script.'}
   $argsList=@('-NoProfile','-ExecutionPolicy','Bypass','-File',$next)
   if($Full){$argsList+='-Full'}
   if($DownloadModels){$argsList+='-DownloadModels'}
   if($NoPrerequisites){$argsList+='-NoPrerequisites'}
   if($NoLaunch){$argsList+='-NoLaunch'}
+  if($TargetRoot){$argsList+=@('-TargetRoot',$target)}
   & powershell.exe @argsList
-  if($LASTEXITCODE -ne 0){throw "Bootstrap after folder move failed (exit $LASTEXITCODE)"}
+  if($LASTEXITCODE -ne 0){throw "Music Studio installation failed after preparing the target (exit $LASTEXITCODE). User data was not deleted."}
   exit 0
 }
 $needed=@(
