@@ -296,7 +296,7 @@ def compatible_audio(path):
 
 
 def training_progress():
-    voice_files = list((ROOT / "Voice Engine" / "training_dataset" / "ALEX_KZNT").glob("alex_voice_*.wav"))
+    voice_files = list((ROOT / "Voice Engine" / "training_dataset" / "OWNER_VOICE").glob("alex_voice_*.wav"))
     model_file = VOICE_TRAINING / "ft_model.pth"
     raw = VOICE_TRAIN_LOG.read_bytes() if VOICE_TRAIN_LOG.exists() else b""
     if raw.startswith(bytes([255, 254])) or raw.count(bytes([0])) > len(raw) // 6:

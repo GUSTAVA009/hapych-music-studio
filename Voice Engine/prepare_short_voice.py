@@ -1,8 +1,8 @@
 from pathlib import Path
 import subprocess,json
 root=Path.home()/'Music Studio'/'Voice Engine'/'training_dataset'
-src=root/'ALEX_KZNT'
-dst=root/'ALEX_KZNT_SHORT'
+src=root/'OWNER_VOICE'
+dst=root/'OWNER_VOICE_SAMPLES'
 dst.mkdir(parents=True,exist_ok=True)
 parts=[]
 for wav in sorted(src.glob('alex_voice_*.wav')):

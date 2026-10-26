@@ -17,7 +17,7 @@ import sys
 sys.path.insert(0,str(R/"app"))
 import voice_training
 if voice_training.status()["active"]:raise RuntimeError("Voice fine-tune active")
-manifest=json.loads((TRAIN/"ALEX_KZNT"/"dataset_manifest.json").read_text(encoding="utf-8"))
+manifest=json.loads((TRAIN/"OWNER_VOICE"/"dataset_manifest.json").read_text(encoding="utf-8"))
 if not any("илья" in x["source"].lower() for x in manifest["samples"]):
  raise RuntimeError("Legacy contamination evidence not found, abort for safety")
 sources=[]
@@ -25,7 +25,7 @@ for f in M.iterdir():
  if f.is_file() and f.suffix.lower() in (".wav",".mp3",".m4a",".flac",".ogg",".aac"):
   # User-recorded microphone WAVs stay; imported melody/short other reference does not.
   if "Микрофон" not in f.name:sources.append(f)
-sources.extend([TRAIN/"ALEX_KZNT",TRAIN/"ALEX_KZNT_SHORT",RUN])
+sources.extend([TRAIN/"OWNER_VOICE",TRAIN/"OWNER_VOICE_SAMPLES",RUN])
 OUT.mkdir(parents=True,exist_ok=True)
 record={"date":datetime.datetime.now().isoformat(),"reason":"Exclude unverified voices, including Ilya legacy dataset",
         "server_before":h["job"]["status"],"actions":[],"reversible":True,

@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess,json
 root=Path.home()/'Music Studio'
 src=root/'Мой голос'
-out=root/'Voice Engine'/'training_dataset'/'ALEX_KZNT'
+out=root/'Voice Engine'/'training_dataset'/'OWNER_VOICE'
 out.mkdir(parents=True,exist_ok=True)
 results=[]
 for i,p in enumerate(sorted(src.glob('*.m4a')),1):

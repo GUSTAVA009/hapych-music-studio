@@ -87,7 +87,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.
 - Для выбранного экспериментального пресета «Защита согласных» можно обработать уже готовый MP3 отдельно через ApexSVC:
 
 ~~~powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Convert-Track-With-MyVoice.ps1 -Source ".\Мои треки\song.mp3" -References @("C:\Audio\MyVoice.wav") -OutputWav ".\Exports\song-myvoice.wav" -Device cpu
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\Convert-Track-With-MyVoice.ps1 -Source ".\Мои треки\song.mp3" -References @("C:\Audio\MyVoice.wav") -OutputWav ".\Exports\song-myvoice.wav" -Device cpu
 ~~~
 
 Учитывай: модель ApexSVC использует **существующий pretrained-конвертер** и голосовую запись как образец. Она не обучается и не гарантирует совпадения тембра один в один. В UI этот QA133-пресет **не стал глобальным по умолчанию**.

@@ -53,7 +53,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.
 Для обработки локального трека (примеры файлов подставь своими):
 
 ~~~powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Convert-Track-With-MyVoice.ps1 -Source ".\Мои треки\song.mp3" -References @("C:\Audio\MyVoice.wav") -OutputWav ".\Exports\song-my-voice.wav" -Device cpu
+Set-ExecutionPolicy -Scope Process Bypass
+.\scripts\Convert-Track-With-MyVoice.ps1 -Source ".\Мои треки\song.mp3" -References @("C:\Audio\MyVoice.wav") -OutputWav ".\Exports\song-my-voice.wav" -Device cpu
 ~~~
 
 Demucs отделяет вокал, ApexSVC переносит тембр на вокальную дорожку, после чего она сводится с инструменталом. Создаются отдельные WAV и MP3. Исходник не перезаписывается.

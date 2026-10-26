@@ -4,7 +4,7 @@ gradio-client>=1.0
 soundfile>=0.12
 librosa>=0.10
 scipy>=1.13
-numpy>=1.26,<2
+# Keep NumPy selected by the pinned ACE-Step environment; do not downgrade it.
 Pillow>=10
 PyYAML>=6
 mutagen>=1.47
