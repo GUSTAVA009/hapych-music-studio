@@ -46,7 +46,7 @@ jobs:
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1 -ValidateOnly
           exit $LASTEXITCODE
-      - name: Regression: restore --no-checkout upstream checkout
+      - name: 'Regression: restore --no-checkout upstream checkout'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Installer-Recovery.ps1
       - name: Upload source-only ZIP from passing checks
