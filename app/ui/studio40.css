@@ -1,0 +1,14 @@
+
+.studio40-storage-records{display:grid;gap:6px;margin-top:14px}
+.studio40-storage-item{display:flex;align-items:center;gap:15px;justify-content:space-between;padding:12px 14px;background:#202021;border:1px solid #383839;border-radius:9px}
+.studio40-storage-location{min-width:0;display:grid;gap:4px}
+.studio40-storage-location strong{font-size:12px;color:#ececee}
+.studio40-storage-location small{font-size:11px;color:#b5b5bb;overflow-wrap:anywhere}
+.studio40-storage-actions{display:flex;flex:none;gap:6px;flex-wrap:wrap}
+.studio40-storage-actions button{font-size:11px!important;min-height:31px!important;padding:6px 9px!important;border-radius:7px!important}
+.studio40-folder-note{color:#9f9fa5;font-size:11px;line-height:1.5}
+.studio40-style-hint{font-size:11px!important;color:#b7a394;margin:10px 0 0}
+.studio40-redraw-button{width:100%;border-radius:9px;padding:10px;background:#332925;border:1px solid #78563d;color:#ffb785;font-size:12px;cursor:pointer;margin-top:12px}
+.studio40-redraw-button:disabled{opacity:.6;cursor:progress}
+.studio40-cover-state{display:block;margin:7px 0 0;color:#b5b5bb;font-size:11px;line-height:1.5}
+@media(max-width:700px){.studio40-storage-item{align-items:flex-start;flex-direction:column}.studio40-storage-actions{width:100%}}

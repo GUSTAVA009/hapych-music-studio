@@ -1,0 +1,241 @@
+/* Music Studio 3.6 — purposeful microinteractions, original black/orange UI.
+   Vue Bits-inspired visual principles, dependency-free CSS/JS.
+   Reduced-motion fallback and native focus states included.
+*/
+:root{
+ --micro36-ink:#f1f1f2;--micro36-quiet:#b5b5b6;
+ --micro36-panel:#1f1f20;--micro36-line:#444445;
+ --micro36-accent:#ffb17b;--micro36-good:#8fe5c4;
+}
+.micro36-thought[hidden],.micro36-undo-toast[hidden]{display:none!important}
+.micro36-thought{
+ margin:2px 0 8px;border:1px solid #4a4a4b;background:#212122;
+ border-radius:10px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.08);
+ animation:micro36-appear .25s cubic-bezier(.16,1,.3,1) both;
+}
+.micro36-thought-head{
+ display:flex;gap:10px;align-items:center;width:100%;min-height:45px;
+ padding:9px 12px;border:0;border-radius:0;background:none!important;
+ color:var(--micro36-ink);font:inherit;text-align:left;cursor:pointer;
+}
+.micro36-thought-glyph{
+ flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+ font-size:16px;color:#ffbc8b;background:#513629;
+}
+.micro36-thought.is-working .micro36-thought-glyph{animation:micro36-breathe 1.7s ease-in-out infinite}
+.micro36-thought-current{font-size:12px;font-weight:670;line-height:1.4;flex:1;min-width:0;overflow-wrap:anywhere}
+.micro36-thought.is-working .micro36-thought-current{
+ background:linear-gradient(95deg,#cfcfd0 6%,#ffca9b 35%,#eeeeef 57%,#cfcfd0 90%);
+ background-size:230% 100%;background-clip:text;-webkit-background-clip:text;
+ color:transparent;animation:micro36-ink-shimmer 2s linear infinite;
+}
+.micro36-thought.is-done .micro36-thought-glyph{background:#1e5347;color:var(--micro36-good)}
+.micro36-thought.is-error .micro36-thought-glyph{background:#5a3539;color:#ffc2bc}
+.micro36-thought-clock{color:#b6b6b7;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.micro36-thought-chevron{font-size:20px;color:#acacad;line-height:1;transition:transform .2s ease}
+.micro36-thought-head[aria-expanded="false"] .micro36-thought-chevron{transform:rotate(-90deg)}
+.micro36-thought-trace{
+ list-style:none;margin:0;padding:3px 14px 11px 44px;border-top:1px solid #3f3f40;
+ background:#1d1d1e;display:grid;gap:7px;
+}
+.micro36-thought-trace[hidden]{display:none}
+.micro36-trace-item{
+ position:relative;margin:0;font-size:11px;line-height:1.45;color:#a2a2a3;
+ overflow-wrap:anywhere;
+}
+.micro36-trace-item:before{
+ content:"✓";position:absolute;left:-23px;top:-1px;
+ font-size:11px;color:#78bdaa;font-weight:800;
+}
+.micro36-trace-item.active{color:#ececed}
+.micro36-trace-item.active:before{content:"●";color:#ffb27d;animation:micro36-breathe 1.5s infinite}
+.micro36-swipe-host{
+ display:block!important;padding:0!important;position:relative!important;
+ overflow:hidden;isolation:isolate;
+}
+.micro36-swipe-face{
+ display:grid;grid-template-columns:60px minmax(0,1fr) auto;align-items:center;
+ gap:13px;min-height:79px;padding:9px 12px;position:relative;z-index:2;
+ width:100%;background:#1c1c1d;
+ border-radius:inherit;transform:translate3d(var(--micro36-shift,0px),0,0);
+ transition:transform .34s cubic-bezier(.22,1.18,.32,1),background .17s ease;
+ touch-action:pan-y;will-change:transform;
+}
+.micro36-swipe-host.dragging .micro36-swipe-face{transition:none}
+.micro36-swipe-host:hover .micro36-swipe-face{background:#242425}
+.micro36-swipe-host.selected .micro36-swipe-face{background:#27232a}
+.micro36-swipe-host .studio34-track-buttons{z-index:3}
+.micro36-swipe-host .studio34-track-main{min-width:0}
+.micro36-swipe-actions{
+ position:absolute;z-index:1;right:0;top:0;bottom:0;width:155px;
+ display:grid;grid-template-columns:1fr 1fr;
+ background:linear-gradient(135deg,#333334,#323233);align-items:stretch;
+}
+.micro36-swipe-actions>button{
+ border:0;background:transparent;color:#e7e7e8;cursor:pointer;
+ padding:8px 3px;font-size:11px;line-height:1.35;
+}
+.micro36-swipe-play:hover{background:#49494a!important}
+.micro36-swipe-remove{color:#ffc0b8!important;background:#443039!important}
+.micro36-swipe-remove:hover{background:#693c44!important}
+.micro36-swipe-host .micro36-swipe-face:focus-within{outline-offset:-3px}
+.micro36-undo-toast{
+ position:fixed;bottom:82px;right:22px;z-index:115;
+ width:min(420px,calc(100vw - 30px));min-height:70px;
+ display:grid;grid-template-columns:31px minmax(0,1fr) auto 24px;
+ align-items:center;gap:10px;background:#29292a;
+ border:1px solid #5c5c5d;border-radius:11px;
+ box-shadow:0 14px 40px rgba(0,0,0,.34);padding:11px 11px 14px;
+ transform:translateY(var(--micro36-toast-y,0px));
+}
+.micro36-undo-toast.enter{animation:micro36-toast-enter .38s cubic-bezier(.16,1.2,.3,1) both}
+.micro36-undo-toast.dragging{animation:none;transition:none}
+.micro36-undo-icon{font-size:21px;color:#ffbc83;display:grid;place-items:center}
+.micro36-undo-body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.micro36-undo-body strong{font-size:12px;color:#f7f7f8;line-height:1.3}
+.micro36-undo-body small{font-size:11px;color:#b8b8b9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.micro36-undo-action{min-height:33px;padding:7px 10px;border:1px solid #ffc292;
+ border-radius:7px;background:#ffb37c;color:#1e1e1f;font-weight:760;font-size:12px;white-space:nowrap}
+.micro36-undo-action:disabled{opacity:.55}
+.micro36-undo-close{height:27px;width:24px;border:0;background:transparent;
+ color:#b9b9ba;font-size:21px;cursor:pointer}
+.micro36-undo-fuse{position:absolute;bottom:0;left:0;right:0;height:3px;transform-origin:left;
+ background:#ffb37c;box-shadow:0 -1px 5px rgba(255,173,114,.3);border-radius:0 0 4px 4px}
+.micro36-undo-toast.enter .micro36-undo-fuse{animation:micro36-fuse 11s linear both}
+.micro36-prompt-bar{
+ border:1px solid #535354;border-radius:10px;background:#19191a;overflow:hidden;
+ transition:border-color .24s ease,box-shadow .24s ease,transform .2s ease;
+}
+.micro36-prompt-bar:focus-within{
+ border-color:#e4a374;box-shadow:0 0 0 2px rgba(255,170,106,.15);
+}
+.micro36-prompt-bar textarea{
+ display:block!important;box-sizing:border-box!important;width:100%!important;
+ border:0!important;outline:0!important;box-shadow:none!important;
+ background:transparent!important;border-radius:0!important;margin:0!important;
+ padding:10px 11px!important;resize:vertical;
+}
+#page-create .micro36-prompt-bar textarea{border:0!important;background:transparent!important}
+.micro36-prompt-foot{
+ display:flex;justify-content:space-between;align-items:center;gap:6px;
+ padding:3px 5px 5px 10px;min-height:34px;
+ background:#222223;border-top:1px solid #3a3a3b;
+}
+.micro36-prompt-info{min-width:0;font-size:10px;color:#a9a9aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.micro36-prompt-actions{display:flex;gap:4px;flex:none}
+.micro36-prompt-actions button{
+ height:27px;min-width:29px;border:1px solid transparent;border-radius:6px;
+ background:#323233;color:#e4e4e5;font-size:14px;cursor:pointer;
+ transition:background .17s ease,transform .19s ease;
+}
+.micro36-prompt-actions button:hover{background:#4d4d4e}
+.micro36-prompt-actions button:active{transform:scale(.94)}
+.micro36-prompt-actions .micro36-prompt-send{
+ min-width:31px;background:#f4a96f;color:#1d1d1e;font-size:16px;font-weight:800
+}
+.micro36-prompt-actions .micro36-prompt-send:hover{background:#ffd0a1}
+.micro36-prompt-actions button:disabled{opacity:.35;cursor:not-allowed}
+#lyricDialog .micro36-prompt-bar{width:100%;max-width:100%}
+#lyricDialog .micro36-prompt-bar textarea{min-height:75px}
+#page-create .editor-panel>.card .micro36-prompt-bar{margin-bottom:2px}
+#page-create .editor-panel>.card .micro36-prompt-bar #style{
+ height:95px;min-height:95px!important;max-height:250px
+}
+#page-create .editor-panel>.card .micro36-prompt-bar #lyrics{
+ height:185px!important;min-height:185px!important
+}
+/* Refine Frame. Only visible while the actual cover HTTP request is pending. */
+.studio34-cover.micro36-refine{
+ position:relative;isolation:isolate;contain:paint;
+}
+.studio34-cover.micro36-refine .studio35-cover-image{
+ transition:opacity .35s ease,filter .35s ease,transform .5s cubic-bezier(.2,1,.35,1);
+ filter:blur(4px);transform:scale(1.025);
+}
+.studio34-cover.micro36-refine[data-cover-phase="complete"] .studio35-cover-image{
+ filter:blur(0);transform:scale(1);opacity:1
+}
+.studio34-cover.micro36-refine[data-cover-phase="loading"]::after{
+ content:"";position:absolute;inset:0;z-index:5;pointer-events:none;
+ background:linear-gradient(107deg,transparent 30%,rgba(255,230,201,.16) 48%,transparent 69%);
+ background-size:240% 100%;animation:micro36-art-sweep 1.55s linear infinite;
+}
+.studio34-cover-large.micro36-refine[data-cover-phase="loading"]::before{
+ content:"Готовим обложку";position:absolute;top:11px;left:12px;inset:auto;
+ width:auto;height:auto;transform:none;z-index:6;font-size:10px;letter-spacing:.2px;
+ padding:6px 9px;border:1px solid #7e7e7f66;border-radius:9px;
+ background:rgba(13,23,34,.8);color:#eeeeef
+}
+.studio34-cover-large.micro36-refine[data-cover-phase="error"]::before{
+ content:"Обложка недоступна";position:absolute;top:11px;left:12px;inset:auto;
+ width:auto;height:auto;transform:none;z-index:6;font-size:11px;
+ padding:7px 10px;border-radius:9px;background:#512e37;color:#ffd0c5;
+}
+/* Spring Check: visual spring, native checkbox remains reachable by keyboard. */
+#studio34ConfirmOwn{
+ appearance:none;-webkit-appearance:none;flex:none;width:20px!important;height:20px!important;
+ margin:0!important;padding:0!important;border:1.5px solid #868687!important;
+ border-radius:6px!important;background:#1e1e1f!important;
+ display:grid;place-items:center;position:relative;cursor:pointer;
+ transition:background .2s ease,border-color .2s ease,box-shadow .2s ease
+}
+#studio34ConfirmOwn::after{
+ content:"";width:8px;height:4px;border-bottom:2px solid #2c1a10;
+ border-left:2px solid #2c1a10;transform:rotate(-45deg) scale(.2);
+ opacity:0;transition:opacity .15s ease,transform .36s cubic-bezier(.14,1.8,.37,1)
+}
+#studio34ConfirmOwn:checked{background:#ffb17b!important;border-color:#ffc89d!important;
+ box-shadow:0 0 0 3px rgba(255,175,119,.13)}
+#studio34ConfirmOwn:checked::after{opacity:1;transform:translateY(-1px) rotate(-45deg) scale(1)}
+#studio34ConfirmOwn:focus-visible{outline:2px solid #f6c9a3!important;outline-offset:3px}
+.studio34-confirm-label:has(#studio34ConfirmOwn:checked){
+ background:#313132!important;border-color:#708e7a!important
+}
+/* Consistent keyboard navigation */
+.micro36-thought-head:focus-visible,
+.micro36-undo-toast button:focus-visible,
+.micro36-prompt-actions button:focus-visible,
+.micro36-swipe-actions button:focus-visible{
+ outline:2px solid #ffd0a2;outline-offset:2px;
+}
+@keyframes micro36-breathe{
+ 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.91)}
+}
+@keyframes micro36-ink-shimmer{
+ 0%{background-position:200% 0}100%{background-position:-40% 0}
+}
+@keyframes micro36-appear{
+ from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}
+}
+@keyframes micro36-art-sweep{
+ 0%{background-position:180% 0}100%{background-position:-90% 0}
+}
+@keyframes micro36-toast-enter{
+ from{opacity:0;transform:translateY(33px) scale(.96)}
+ to{opacity:1;transform:translateY(var(--micro36-toast-y,0px)) scale(1)}
+}
+@keyframes micro36-fuse{0%{transform:scaleX(1)}100%{transform:scaleX(0)}}
+@media(max-width:1280px){
+ .micro36-swipe-face{grid-template-columns:58px minmax(0,1fr) auto}
+}
+@media(max-width:620px){
+ .micro36-swipe-face{grid-template-columns:51px minmax(0,1fr) auto;gap:8px;padding:7px;min-height:66px}
+ .micro36-undo-toast{bottom:132px;right:10px;width:calc(100vw - 20px);grid-template-columns:24px minmax(0,1fr) auto 22px;gap:7px;padding:10px 8px 13px}
+ .micro36-undo-action{font-size:11px;min-height:31px;padding:6px}
+ .micro36-undo-body strong{font-size:11px}
+ .micro36-prompt-foot{min-height:30px;padding-left:7px}
+ .micro36-prompt-info{font-size:9px}
+ .micro36-thought-head{gap:7px;padding:8px}
+ .micro36-thought-current{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ .micro36-thought,.micro36-undo-toast.enter{animation:none!important}
+ .micro36-thought.is-working .micro36-thought-glyph,
+ .micro36-thought.is-working .micro36-thought-current,
+ .micro36-trace-item.active:before,
+ .studio34-cover.micro36-refine[data-cover-phase="loading"]::after,
+ .micro36-undo-toast .micro36-undo-fuse{animation:none!important}
+ .micro36-swipe-face,.micro36-prompt-bar,.micro36-thought-chevron,
+ #studio34ConfirmOwn,#studio34ConfirmOwn::after,
+ .studio34-cover.micro36-refine .studio35-cover-image{transition:none!important}
+}

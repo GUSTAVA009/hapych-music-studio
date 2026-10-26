@@ -1,0 +1,14 @@
+{
+  "ace-step": {
+    "repo": "https://github.com/ACE-Step/ACE-Step-1.5.git",
+    "commit": "ca1e85fe9430179831e6bc6be790c332190a3866"
+  },
+  "seed-vc": {
+    "repo": "https://github.com/Plachtaa/seed-vc.git",
+    "commit": "51383efd921027683c89e5348211d93ff12ac2a8"
+  },
+  "apexsvc": {
+    "repo": "https://github.com/HoppouAI/ApexSVC.git",
+    "commit": "46a1a68c636f17963f46be4b76483eb610dc3b61"
+  }
+}

@@ -1,0 +1,10 @@
+/* Persistent and mouse-safe player targets: avoid hover traps from replaced SVG nodes. */
+.track-cover{isolation:isolate}
+.track-cover>img,.track-cover>.cover-placeholder{pointer-events:none}
+.track-cover .cover-play{z-index:3;pointer-events:auto;cursor:pointer;touch-action:manipulation;will-change:opacity;transition:opacity .12s ease,transform .12s ease}
+.track.selected .cover-play,.track:hover .cover-play,.track:focus-within .cover-play{opacity:1;transform:scale(1)}
+.player .round-play,.player-controls button{position:relative;z-index:2;touch-action:manipulation;cursor:pointer}
+.track button,.voice-play{touch-action:manipulation}
+@media (hover:none),(pointer:coarse){
+ .track .cover-play{opacity:.88;transform:scale(1)}
+}

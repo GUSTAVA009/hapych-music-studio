@@ -1,0 +1,16 @@
+name: Source audit (manual)
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check source content, credentials and syntax
+        run: python tools/audit_repo.py
+      - name: Compile code without model dependencies
+        run: python -m compileall -q app "Voice Engine" tools research

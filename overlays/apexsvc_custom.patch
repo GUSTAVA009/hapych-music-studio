@@ -1,0 +1,43 @@
+diff --git a/svc/content/encoder.py b/svc/content/encoder.py
+index 0c36389..90c91da 100644
+--- a/svc/content/encoder.py
++++ b/svc/content/encoder.py
+@@ -49,7 +49,7 @@ class WavLMEncoder(nn.Module):
+ 
+     def __init__(self, ckpt_path: str | Path, device: str | torch.device = "cpu") -> None:
+         super().__init__()
+-        ckpt = torch.load(str(ckpt_path), map_location="cpu", weights_only=False)
++        ckpt = torch.load(str(ckpt_path), map_location="cpu", weights_only=True)
+         cfg = WavLMConfig(ckpt["cfg"])
+         wavlm = WavLM(cfg)
+         wavlm.load_state_dict(ckpt["model"])
+diff --git a/svc/content/wavlm/WavLM.py b/svc/content/wavlm/WavLM.py
+index 644ab89..71b8cb2 100644
+--- a/svc/content/wavlm/WavLM.py
++++ b/svc/content/wavlm/WavLM.py
+@@ -226,7 +226,11 @@ class WavLM(nn.Module):
+         logger.info(f"WavLM Config: {cfg.__dict__}")
+ 
+         self.cfg = cfg
+-        feature_enc_layers = eval(cfg.conv_feature_layers)
++        canonical = "[(512,10,5)] + [(512,3,2)] * 4 + [(512,2,2)] * 2"
++        normalized = str(cfg.conv_feature_layers).replace(" ", "")
++        if normalized != canonical.replace(" ", ""):
++            raise ValueError("Unrecognized WavLM convolution layout; refused to evaluate checkpoint text")
++        feature_enc_layers = [(512, 10, 5)] + [(512, 3, 2)] * 4 + [(512, 2, 2)] * 2
+         self.embed = feature_enc_layers[-1][0]
+ 
+         self.feature_extractor = ConvFeatureExtractionModel(
+diff --git a/svc/pipeline.py b/svc/pipeline.py
+index 2648da9..fa06a2c 100644
+--- a/svc/pipeline.py
++++ b/svc/pipeline.py
+@@ -89,7 +89,7 @@ class SVCPipeline:
+         with open(synth_cfg) as f:
+             cfg = AttrDict(json.load(f))
+         gen = GeneratorNSF(cfg).to(self.device)
+-        state = torch.load(synth_ckpt, map_location="cpu", weights_only=False)
++        state = torch.load(synth_ckpt, map_location="cpu", weights_only=True)
+         gen.load_state_dict(state["generator"])
+         gen.remove_weight_norm()
+         self.synth = gen.eval()

@@ -1,0 +1,331 @@
+/*
+  MUSIC STUDIO / COMPOSER 3.2
+  Real composition workspace. Purpose-led grid, readable inputs, no model changes.
+  Loaded after Studio Desk 3.0; scoped to Create screen and common legibility.
+*/
+:root{
+  --c32-canvas:#0e131b;
+  --c32-panel:#171f2b;
+  --c32-panel-alt:#1a2635;
+  --c32-input:#101823;
+  --c32-line:#354357;
+  --c32-line-soft:#2b384a;
+  --c32-fg:#f4f6fa;
+  --c32-muted:#b5c1cf;
+  --c32-dim:#879caf;
+  --c32-accent:#ffb781;
+  --c32-accent-ink:#261d18;
+}
+#page-create{max-width:none;width:100%;margin:0;min-width:0}
+#page-create .heading{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:24px;margin:23px 0 20px;
+}
+#page-create .heading h1{
+  margin:4px 0 6px;font-size:clamp(28px,2.25vw,38px);
+  font-weight:790;line-height:1.18;letter-spacing:-.9px;
+}
+#page-create .heading p{max-width:750px;color:#abb8c9;font-size:14px;line-height:1.55}
+#page-create .heading .eyebrow{color:#f1b186;font-size:11px;letter-spacing:1.55px}
+#page-create .spark{font-size:19px;color:#f6a96e}
+#page-create .studio-layout{
+  display:grid;grid-template-columns:minmax(0,1fr) clamp(310px,23vw,410px);
+  gap:19px;align-items:start;
+}
+#page-create .editor-panel{
+  display:grid;grid-template-columns:minmax(0,0.96fr) minmax(0,1.04fr);
+  grid-template-areas:
+   "title title"
+   "style lyrics"
+   "voice lyrics"
+   "submit submit"
+   "note note";
+  grid-auto-rows:min-content;
+  gap:16px;min-width:0;align-items:stretch;
+}
+#page-create .editor-panel>.card{
+  min-width:0;padding:21px 23px;
+  background:var(--c32-panel);border:1px solid var(--c32-line-soft);
+  border-radius:13px;box-shadow:none;align-self:stretch;
+  display:flex;flex-direction:column;
+}
+#page-create .editor-panel>.card:nth-child(1){grid-area:title;display:grid;
+  grid-template-columns:minmax(155px,230px) minmax(0,1fr);
+  grid-template-rows:auto auto;align-content:center;align-items:center;
+  column-gap:22px;row-gap:7px;min-height:118px;
+  background:linear-gradient(105deg,#1d2937,#18212d 72%);
+  border-color:#3e4d60;
+}
+#page-create .editor-panel>.card:nth-child(1) .card-head{grid-column:1;grid-row:1/3;margin:0}
+#page-create .editor-panel>.card:nth-child(1)>.field{
+  grid-column:2;grid-row:1;margin:0;
+}
+#page-create .editor-panel>.card:nth-child(1)>.remix-details{
+  grid-column:2;grid-row:2;margin:0;border-top:0;padding:0
+}
+#page-create .editor-panel>.card:nth-child(1)>.remix-details>summary{
+  padding:2px 0;color:#b2bdcc;font-size:12px;font-weight:630;
+}
+#page-create .editor-panel>.card:nth-child(2){grid-area:style;}
+#page-create .editor-panel>.card:nth-child(3){grid-area:lyrics;}
+#page-create .editor-panel>.card:nth-child(4){grid-area:voice;align-self:stretch}
+#page-create .editor-panel>.generate-button{grid-area:submit;}
+#page-create .editor-panel>.generating-note{grid-area:note;align-self:start;}
+#page-create .editor-panel .card-head{
+  display:flex;align-items:center;gap:12px;margin:0 0 20px;
+  padding:0 0 16px;border-bottom:1px solid var(--c32-line-soft);min-width:0;
+}
+#page-create .editor-panel>.card:first-child .card-head{padding:0;border:0}
+#page-create .card-head .step{
+  background:transparent;color:#ebaa77;border:1px solid #6a4b3b;
+  border-radius:8px;width:31px;height:31px;font-size:11px;font-variant-numeric:tabular-nums;
+}
+#page-create .card-head h2{margin:0 0 3px;font-size:17px;font-weight:760;letter-spacing:-.2px;line-height:1.25;color:#f5f6fa}
+#page-create .card-head p{margin:0;font-size:12px;color:#9eafc2;line-height:1.5}
+#page-create .field{margin-bottom:14px;min-width:0}
+#page-create .editor-panel label:not(.switch):not(.checkline):not(.upload-zone){
+  display:block;font-size:13px;font-weight:700;color:#dce6f1;margin-bottom:8px;
+}
+#page-create .label-note{font-size:12px;color:#aebccd;font-weight:470}
+#page-create :is(input:not([type=checkbox]):not([type=file]),textarea,select){
+  background:var(--c32-input)!important;
+  border:1px solid #405168!important;color:#edf2f8!important;
+  border-radius:9px!important;font-size:15px!important;
+  line-height:1.65;min-height:44px;padding:11px 13px!important;
+}
+#page-create input:not([type=checkbox]):not([type=file]):focus,
+#page-create textarea:focus,#page-create select:focus{
+  border-color:#f0b17d!important;outline:0!important;
+  box-shadow:0 0 0 3px rgba(255,174,119,.14)!important;
+}
+#page-create input::placeholder,#page-create textarea::placeholder{color:#8e9fb0!important}
+#page-create .field-hint,#page-create .field-bottom{
+  color:#acb9c8;font-size:12px;line-height:1.6;
+}
+#page-create .card:nth-child(2)>.field{margin:0;display:flex;flex-direction:column}
+#page-create #style{
+  min-height:148px;max-height:500px;resize:vertical;letter-spacing:.02px;
+}
+#page-create #styleCount{font-size:12px;color:#b5c1ce;margin-top:7px}
+#page-create .preparation-actions{margin:9px 0 7px}
+#page-create .preparation-actions .secondary-button{
+  font-size:12px;min-height:34px;padding:7px 11px;background:#222e40;
+  border:1px solid #455771;border-radius:7px;
+}
+#page-create #prepDetails{
+  background:transparent!important;border:1px solid #39495f!important;
+  margin:7px 0 10px!important;padding:5px 11px!important;
+  border-radius:8px!important;
+}
+#page-create #prepDetails>summary{color:#e2bd98;font-size:12px;padding:5px 2px;font-weight:690}
+#page-create .presets-label{margin:13px 0 8px;color:#b7c6d4;font-size:12px}
+#page-create .chips{gap:7px}
+#page-create .chips .chip,#page-create .lyric-actions .chip{
+  border-radius:7px;min-height:33px;padding:6px 9px;
+  font-size:12px;color:#dce6f1;border:1px solid #42526b;
+  background:#243246;
+}
+#page-create .chips .chip.selected{background:#3d3027;color:#ffcd9d;border-color:#b58b66}
+#page-create .card:nth-child(3)>.field{
+  margin:0;display:flex;flex-direction:column;flex:1;min-height:0;
+}
+#page-create .lyric-heading{gap:12px;flex-wrap:wrap}
+#page-create .lyric-heading>div:nth-child(2){min-width:0;flex:1}
+#page-create #openLyricDialog{
+  margin-left:auto;flex:none;min-height:39px;padding:8px 13px;
+  font-size:12px;font-weight:750;color:#282018!important;
+  border-color:#ffd0a6!important;background:#ffb985!important;
+  border-radius:8px;box-shadow:none;
+}
+#page-create .writer-toolbar{display:none}
+#page-create #chosenLyricLabel{
+  color:#afc7cc;font-size:12px;line-height:1.5;
+  border-radius:7px;border:1px solid #2e4950;border-left:3px solid #70b5a5;
+  background:#172d33;padding:8px 11px;margin:0 0 13px;
+}
+#page-create #lyrics{
+  min-height:420px;height:100%;flex:1;line-height:1.78!important;
+  font-size:15px!important;resize:vertical;
+}
+#page-create .lyric-actions{margin:12px 0 0}
+#page-create .field-bottom{
+  display:flex;flex-direction:row;flex-wrap:wrap;
+  justify-content:space-between;gap:8px;margin-top:10px
+}
+#page-create #wordCount{font-variant-numeric:tabular-nums;color:#d1bdab}
+#page-create .card:nth-child(4) .voice-strip{
+  display:flex;gap:11px;align-items:center;padding:13px;background:#121d2a;
+  border:1px solid #3b4d64;border-radius:9px;margin:0 0 13px;
+}
+#page-create .voice-strip-icon{background:#34313c;color:#ffbc8b;border-radius:8px}
+#page-create .voice-strip-copy b{font-size:13px;line-height:1.3;margin:0 0 3px}
+#page-create .voice-strip-copy small{font-size:12px;line-height:1.45;color:#aab9cb}
+#page-create #voiceChooser{margin:3px 0 0}
+#page-create .voice-pick{display:flex;flex-wrap:wrap;gap:9px}
+#page-create .voice-pick select{flex:1 1 200px;width:auto;min-width:170px}
+#page-create .voice-pick button{min-height:44px;font-size:12px;flex:none;white-space:normal}
+#page-create .advanced-song{
+  padding-top:10px;margin-top:12px;border-top:1px solid #334457;
+}
+#page-create .advanced-song>summary{
+  color:#ebc19f;font-size:13px;padding:9px 0;font-weight:710;
+}
+#page-create .advanced-song>summary span{display:block;color:#9aafc1;font-size:11px;font-weight:500}
+#page-create .card:nth-child(4)>.field-hint{font-size:12px;margin-top:6px;line-height:1.4}
+#page-create .generate-button{
+  min-height:60px;border-radius:11px;
+  background:#ffb981!important;border:1px solid #ffcfa6!important;
+  box-shadow:none;font-size:17px;font-weight:825;
+  color:#251b16!important;letter-spacing:0;
+  transition:transform .15s ease,background .2s ease,box-shadow .2s ease;
+}
+#page-create .generate-button:not(:disabled):hover{
+  background:#ffd1a1!important;box-shadow:0 6px 22px rgba(240,161,100,.17);
+}
+#page-create .generate-button .arrow{margin-left:3px}
+#page-create .generating-note{
+  margin:-7px 0 0;color:#8d9eaf;text-align:center;font-size:11px;line-height:1.5;
+}
+#page-create .results-panel{
+  position:sticky;top:90px;align-self:start;display:flex;flex-direction:column;
+  gap:12px;min-width:0;max-height:none;overflow:visible;
+}
+#page-create .result-card{
+  min-height:0;padding:21px;
+  border-radius:13px;background:#192331;
+  border:1px solid #425166;box-shadow:none;
+}
+#page-create .result-top{margin:0 0 17px;align-items:center}
+#page-create .result-top .overline{color:#f1b185;font-size:11px;letter-spacing:1.4px}
+#page-create .round-icon{width:33px;height:33px;font-size:17px}
+#page-create .result-card h2{
+  font-size:20px;line-height:1.3;letter-spacing:-.45px;
+  margin:0 0 9px;font-weight:770;
+}
+#page-create .result-card>p{
+  font-size:13px;line-height:1.65;margin:0 0 15px;color:#b3c0cf
+}
+#page-create #jobBox{
+  min-height:102px;border:1px solid #455872;
+  border-radius:10px;gap:5px;
+  background:#131d2b;padding:17px 14px;
+}
+#page-create #jobBox .job-symbol{width:36px;height:36px;font-size:20px;border-radius:9px}
+#page-create #jobTitle{font-size:14px;font-weight:755}
+#page-create #jobDetails{font-size:12px;line-height:1.5;max-width:none}
+#page-create .compose-check{border-top:1px solid #344357;padding:16px 0 0;margin:17px 0 0}
+#page-create .compose-check-heading{
+  font-size:10px;font-weight:760;color:#aebac8;letter-spacing:1.5px;
+  margin:0 0 10px;
+}
+#page-create .compose-check-list{display:grid;gap:11px}
+#page-create .compose-check-item{display:flex;align-items:center;gap:9px;font-size:12px;line-height:1.4;color:#c1cede}
+#page-create .compose-check-mark{
+  width:20px;height:20px;border:1px solid #455369;
+  background:#263448;color:#f0b38c;
+  display:grid;place-items:center;border-radius:6px;flex:none;
+  font-size:11px;font-weight:750;
+}
+#page-create .compose-check-item.done .compose-check-mark{
+  background:#204338;border-color:#447b66;color:#b9e9d0
+}
+#page-create .compose-check-item .status-text{margin-left:auto;color:#98aabd;text-align:right;font-size:11px}
+#page-create .compose-check-item.done .status-text{color:#a2dbc0}
+#page-create .result-card .output-list{margin:16px 0 0;gap:10px}
+#page-create .result-item{border:1px solid #425771;background:#121d2a;padding:12px}
+#page-create .result-item>b{font-size:14px}
+#page-create .help-card{
+  background:#161e29;border-radius:11px;border:1px solid #303d4f;
+  padding:0 15px;margin:0;color:#b7c4d0;
+}
+#page-create .help-card>summary{
+  list-style:none;cursor:pointer;padding:12px 0;
+  font-size:13px;font-weight:710;color:#d5e0eb;
+}
+#page-create .help-card>summary::-webkit-details-marker{display:none}
+#page-create .help-card>summary::before{content:"ⓘ";color:#ffb581;margin-right:9px}
+#page-create .help-card>summary::after{content:"⌄";float:right;color:#9cacc0}
+#page-create .help-card[open]>summary::after{content:"⌃"}
+#page-create .help-card>p{margin:0 0 15px;font-size:12px;line-height:1.6}
+#page-create .help-card code{color:#ffd0a7}
+#page-create .editor-panel>.card:focus-within{
+  border-color:#586d83;
+}
+#page-create #openLyricDialog:focus-visible,
+#page-create .generate-button:focus-visible{
+  outline:2px solid #ffcf9d!important;outline-offset:3px
+}
+
+/* Compact composition workflow on medium screens; no cramped 300px editors. */
+@media (min-width:1001px) and (max-width:1450px){
+ #page-create .studio-layout{grid-template-columns:minmax(0,1fr) 290px;gap:15px}
+ #page-create .editor-panel{grid-template-columns:minmax(0,1fr);grid-template-areas:
+  "title" "style" "lyrics" "voice" "submit" "note"}
+ #page-create .editor-panel>.card{padding:20px}
+ #page-create #lyrics{height:420px}
+ #page-create .results-panel{top:80px}
+}
+@media (max-width:1000px){
+ #page-create .studio-layout{display:flex;flex-direction:column;gap:17px}
+ #page-create .editor-panel{width:100%;grid-template-columns:minmax(0,1fr);
+   grid-template-areas:"title" "style" "lyrics" "voice" "submit" "note"}
+ #page-create .results-panel{position:static;width:100%}
+ #page-create .editor-panel>.card:nth-child(1){grid-template-columns:minmax(0,1fr);grid-template-rows:auto}
+ #page-create .editor-panel>.card:nth-child(1) .card-head,
+ #page-create .editor-panel>.card:nth-child(1)>.field,
+ #page-create .editor-panel>.card:nth-child(1)>.remix-details{
+  grid-column:1;grid-row:auto;
+ }
+ #page-create #lyrics{min-height:380px;height:420px;flex:none}
+}
+@media (max-width:580px){
+ #page-create .heading{margin:21px 0 16px}
+ #page-create .heading h1{font-size:27px}
+ #page-create .heading p{font-size:13px}
+ #page-create .editor-panel{gap:12px}
+ #page-create .editor-panel>.card{padding:16px}
+ #page-create .editor-panel>.card:nth-child(1){padding:16px;min-height:0}
+ #page-create .card-head{padding-bottom:12px;margin-bottom:15px}
+ #page-create .card-head h2{font-size:16px}
+ #page-create .card-head p{font-size:11px}
+ #page-create .lyric-heading{align-items:flex-start}
+ #page-create #openLyricDialog{margin-left:0;min-height:41px;width:100%}
+ #page-create #lyrics{min-height:310px;height:360px}
+ #page-create .result-card{padding:17px}
+ #page-create .settings-grid{grid-template-columns:1fr}
+ #page-create .field-bottom{flex-direction:row}
+ #page-create .voice-pick{flex-direction:column}
+ #page-create .voice-pick select,#page-create .voice-pick button{width:100%;flex:unset}
+}
+/* CPU/GPU-friendly animation, follows Studio Motion switch and Windows setting */
+@media (prefers-reduced-motion:reduce){
+ #page-create .generate-button{transition:none!important}
+}
+html.motion-disabled #page-create .generate-button{transition:none!important}
+
+/* One always-visible primary action for desktop, native action for mobile. */
+#page-create .compose-run{
+  width:100%;display:flex;justify-content:center;align-items:center;gap:12px;
+  min-height:52px;margin:17px 0 0;padding:12px 15px;
+  border:1px solid #ffd5ac;border-radius:10px;
+  background:#ffbb86;color:#291e16;font-size:15px;font-weight:830;
+  box-shadow:0 5px 18px rgba(245,158,91,.10);
+}
+#page-create .compose-run:hover:not(:disabled){
+  background:#ffd2a5;transform:translateY(-1px)
+}
+#page-create .compose-run:disabled{opacity:.55;cursor:progress}
+#page-create .compose-run:focus-visible{outline:2px solid #ffd8b2!important;outline-offset:3px}
+#page-create .compose-run-caption{
+  font-size:11px;line-height:1.5;color:#93a7b9;text-align:center;margin:8px 0 0;
+}
+@media(min-width:1001px){
+  #page-create .editor-panel>.generate-button,
+  #page-create .editor-panel>.generating-note{display:none}
+}
+@media(max-width:1000px){
+  #page-create .compose-run,#page-create .compose-run-caption{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  #page-create .compose-run{transition:none!important}
+}

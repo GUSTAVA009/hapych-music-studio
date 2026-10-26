@@ -1,0 +1,103 @@
+# HAPYCH Music Studio source-only private repository
+# No voice samples, song libraries, personal checkpoints or model weights.
+
+# Third-party repos are fetched during setup, not committed here
+/ACE-Step-1.5/
+/Voice Engine/seed-vc/
+/Voice Engine/alternatives/ApexSVC/
+/Integrations/
+/Sound Library/
+/Training Runs/
+/Voice Profiles/
+/Voice Quarantine/
+/Backups/
+/Diagnostics/
+/Experiments/
+/Exports/
+/Мой голос/
+/Мои треки/
+/Мастер WAV/
+/Исходные версии/
+/Обложки/
+/Тренировочные треки/
+
+# Python and JS environments
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/node_modules/
+**/.uv/
+**/.mypy_cache/
+*.pyc
+*.pyo
+
+# AI models, private checkpoints, serialized embeddings
+*.ckpt
+*.safetensors
+*.pth
+*.pt
+*.onnx
+*.gguf
+*.ggml
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.bin
+
+# User media, tracks and covers (never commit even for private repo)
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.aac
+*.aiff
+*.mp4
+*.mov
+*.webm
+*.webp
+*.png
+*.jpg
+*.jpeg
+*.zip
+*.7z
+*.rar
+
+# Logs, API tokens, accounts, local databases, caches
+*.log
+*.tmp
+*.sqlite
+*.sqlite3
+*.db
+*.env
+.env.*
+*.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.credentials
+*.session.json
+*token*.json
+*secret*.json
+**/Cache/
+**/cache/
+**/checkpoints/
+**/models/
+**/samples/
+**/datasets/
+**/training_dataset/
+**/runs/
+
+# Old backups should not be committed by mistake
+*.bak
+*.backup
+*.orig
+*.patching
+*.new25
+
+# Keep source-only reference assets and templates
