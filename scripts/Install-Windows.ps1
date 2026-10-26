@@ -32,28 +32,55 @@ function Install-Pinned([string]$key,[string]$folder){
   $origin=[string]$entry.repo
   $sha=[string]$entry.commit
   if($sha -notmatch '^[0-9a-f]{40}$'){throw "Invalid pinned commit for $key"}
+  # A clone must populate the working tree. Older installers used
+  # 'git clone --no-checkout' and considered HEAD sufficient even when the
+  # actual pyproject.toml / README.md files were missing.
+  $requiredFile = switch ($key) {
+    'ace-step' { 'pyproject.toml' }
+    'apexsvc'  { 'pyproject.toml' }
+    'seed-vc'  { 'README.md' }
+    default    { 'README.md' }
+  }
   $fresh=$false
   if(-not(Test-Path (Join-Path $folder '.git'))){
     if(Test-Path $folder){throw "Directory exists without Git metadata: $folder"}
-    Invoke-Step "Clone $key" { & git clone --no-checkout $origin $folder }
+    Invoke-Step "Clone $key (with working files)" { & git clone --depth 1 $origin $folder }
     $fresh=$true
   }
   $remote=(& git -C $folder remote get-url origin).Trim()
   if($remote -ine $origin){throw "Wrong upstream for $key : $remote"}
   $head=(& git -C $folder rev-parse HEAD).Trim()
-  if($head -eq $sha){Write-Host "$key already at pinned commit" -ForegroundColor Green;return}
-  if(-not $fresh){
-    $modified=@(& git -C $folder status --porcelain=v1 -uno)
-    if($modified.Count -gt 0){throw "$key contains local changes; refusing to overwrite"}
+  $requiredPath=Join-Path $folder $requiredFile
+  if($head -eq $sha -and (Test-Path $requiredPath)){
+    Write-Host "[$key] Checked out at pinned commit $sha" -ForegroundColor Green
+    return
   }
-  Invoke-Step "Fetch pinned $key" { & git -C $folder fetch --depth 1 origin $sha }
-  Invoke-Step "Checkout pinned $key" { & git -C $folder checkout --detach $sha }
+  # Repair an old --no-checkout clone only if its worktree is really empty.
+  # Never reset a folder containing files or local user modifications.
+  $worktreeEntries=@(Get-ChildItem -LiteralPath $folder -Force |
+      Where-Object { $_.Name -ne '.git' })
+  $emptyWorktree=($worktreeEntries.Count -eq 0)
+  if($head -eq $sha -and $emptyWorktree){
+    Invoke-Step "Materialize missing $key files" { & git -C $folder reset --hard $sha }
+  }else{
+    if(-not $fresh){
+      $modified=@(& git -C $folder status --porcelain=v1 -uno)
+      if($modified.Count -gt 0 -and -not $emptyWorktree){
+        throw "$key contains local changes; refusing checkout to protect your files"
+      }
+    }
+    Invoke-Step "Fetch pinned $key commit" { & git -C $folder fetch --depth 1 origin $sha }
+    Invoke-Step "Checkout pinned $key commit" { & git -C $folder checkout --detach $sha }
+  }
+  if(-not (Test-Path $requiredPath)){
+    throw "$key checkout is incomplete: missing $requiredFile in $folder. No dependencies installed."
+  }
 }
 Write-Host 'HAPYCH Music Studio / Windows installation' -ForegroundColor Green
 $ace=Join-Path $repo 'ACE-Step-1.5'
 Install-Pinned 'ace-step' $ace
 Push-Location $ace
-try{Invoke-Step 'ACE-Step v1.5 dependencies (large download)' { & uv sync --frozen }}
+try{Invoke-Step 'ACE-Step v1.5 dependencies (large download)' { & uv sync --project $ace --frozen }}
 finally{Pop-Location}
 $acePython=Join-Path $ace '.venv\Scripts\python.exe'
 if(-not(Test-Path $acePython)){throw 'ACE-Step Python executable not found'}
@@ -97,7 +124,7 @@ if($Full){
   }
   Invoke-Step 'Install Python 3.10 for ApexSVC' { & uv python install 3.10 }
   Push-Location $apex
-  try{Invoke-Step 'Install ApexSVC pinned environment' { & uv sync --frozen --python 3.10 }}
+  try{Invoke-Step 'Install ApexSVC pinned environment' { & uv sync --project $apex --frozen --python 3.10 }}
   finally{Pop-Location}
   if($DownloadModels){
     Push-Location $apex

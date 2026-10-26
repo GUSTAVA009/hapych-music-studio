@@ -5,6 +5,7 @@
 | `git clone` выдаёт 404 / Authentication failed | Репозиторий приватный. Авторизуйся в GitHub под аккаунтом с доступом. |
 | `uv` / `ffmpeg` не найдены | Установи программу, добавь в `PATH`, открой новый PowerShell. |
 | Неверная папка установки | Клонируй именно в `%USERPROFILE%\Music Studio`; некоторые модули используют этот путь. |
+| `uv sync`: `No pyproject.toml found` после клонирования ACE-Step | Ошибка старого установщика: репозиторий скачивался через `--no-checkout` без рабочих файлов. Исправлено. В папке Music Studio выполни `git pull --ff-only` и заново запусти `scripts/Install-Windows.ps1`. Обновлённый установщик безопасно восстановит пустой checkout. Ничего вручную не удаляй. |
 | `uv sync` не устанавливает CUDA / torch | Проверь Windows x64, драйвер GPU, свободное место, доступ к PyTorch index и конфликт версий. |
 | Интерфейс не открывается | Проверь `http://127.0.0.1:7870/api/health` и файлы `app/music-studio-*.log`. |
 | ACE-Step не запускается | Проверь `ACE-Step-1.5\.venv\Scripts\acestep.exe`, порт `7862` и доступность pretrained-моделей. |
