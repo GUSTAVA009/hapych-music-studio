@@ -129,11 +129,15 @@ if($Full){
     }else{Copy-Item $_.FullName $target}
   }
   $patch=Join-Path $repo 'overlays\apexsvc_custom.patch'
-  & git -C $apex apply --reverse --check $patch 2>$null
-  if($LASTEXITCODE -ne 0){
-    Invoke-Step 'Verify ApexSVC compatibility patch' { & git -C $apex apply --check $patch }
-    Invoke-Step 'Apply ApexSVC compatibility patch' { & git -C $apex apply $patch }
-  }else{Write-Host 'ApexSVC compatibility patch already applied.'}
+  $patcher=Join-Path $repo 'tools\apply_apex_patch.py'
+  if(-not(Test-Path $patcher)){throw 'Missing ApexSVC compatibility patch installer.'}
+  # Git apply --reverse --check returns 1 for a clean, unpatched tree.
+  # PowerShell 5.1 treated that expected Git stderr as a NativeCommandError.
+  # The Python helper checks every file before modifying any target, then
+  # applies missing sections and recovers from partial patch application.
+  Invoke-Step 'Check and apply ApexSVC compatibility patch safely' {
+    & $acePython -X utf8 $patcher --repo $apex --patch $patch --expected-commit $versions.apexsvc.commit
+  }
   Invoke-Step 'Install Python 3.11' { & uv python install 3.11 }
   $voiceEnv=Join-Path $repo 'Voice Engine\.venv'
   $voicePython=Join-Path $voiceEnv 'Scripts\python.exe'

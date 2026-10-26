@@ -131,6 +131,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Diagnose-Windows.p
 - `Music Studio already exists`: в актуальном установщике **официальная Git-установка обновляется автоматически**. Если ошибка появилась в старом ZIP, скачай последний релиз и снова запусти `Install.cmd`. Если папка не является Git-репозиторием, установщик не будет менять личные файлы; сделай резервную копию или переименуй её вручную.
 - `git / uv / ffmpeg не распознано`: установи программу, открой новый PowerShell и проверь переменную PATH.
 - `No pyproject.toml found`: это ошибка старого установщика `git clone --no-checkout`. Теперь исправлено. Выполни `git pull --ff-only` и снова запусти установку — ничего вручную удалять не надо.
+- `git.exe : error: patch failed: svc/pipeline.py:89`: ошибка старой проверки патча ApexSVC при переустановке или при Windows CRLF. Обнови Git-копию командой `git pull --ff-only` и повтори установку. Новый проверяющий модуль безопасно восстанавливает отсутствующие части патча и не удаляет модели.
 - `Model download failed`: проверь интернет, свободное место и доступ к Hugging Face / Google Drive.
 - `CUDA out of memory`: освободи VRAM, используй режим с offload, снизь объём модели.
 - `Voice model / checkpoint missing`: запусти установку с `-Full -DownloadModels` и проверь лицензии голосовых банков.
