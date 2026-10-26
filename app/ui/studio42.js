@@ -19,11 +19,20 @@
  function toast(message,kind="",undo){
   const root=$("toast");root.className="toast"+(kind==="error"?" error":"");root.textContent=String(message);
   if(undo){const btn=document.createElement("button");btn.textContent="Вернуть";btn.addEventListener("click",async()=>{try{await undo();root.hidden=true}catch(ex){toast(ex.message,"error")}});root.append(btn)}
-  root.hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>root.hidden=true,undo?11000:4800)
+  root.hidden=false;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>root.hidden=true,undo?11000:(kind==="error"?17000:4800))
  }
  const json=async(path,options={})=>{
-  const r=await fetch(path,{cache:"no-store",...options});
-  const t=await r.text();let data;try{data=JSON.parse(t)}catch{throw Error("Сервер не вернул корректный ответ. "+r.status)}
+  let r;
+  try{r=await fetch(path,{cache:"no-store",...options})}
+  catch(err){
+   if(location.protocol==="file:")throw Error("Music Studio нельзя запускать двойным кликом по HTML. Открой http://127.0.0.1:7870 после запуска Start-MusicStudio.ps1.");
+   if(err?.name==="AbortError")throw Error("Локальный сервер не ответил вовремя. Проверь scripts/Diagnose-Windows.ps1.");
+   // Never silently retry a POST /api/generate: the job may already have started.
+   throw Error("Нет связи с сервером Music Studio (127.0.0.1:7870). "
+    +"Возможно, он остановился или закончилась память при загрузке ACE-Step. "
+    +"Проверь http://127.0.0.1:7870/api/health и запусти scripts/Diagnose-Windows.ps1.");
+  }
+  const t=await r.text();let data;try{data=JSON.parse(t)}catch{throw Error("Сервер вернул некорректный ответ HTTP "+r.status+". Проверь scripts/Diagnose-Windows.ps1.")}
   if(!r.ok)throw Error(data.error||data.message||("Ошибка HTTP "+r.status));
   return data;
  };
@@ -171,15 +180,23 @@
    const h=await json("/api/health");
    state.job=h.job||{status:"idle"};
    state.lyricsBusy=!!h.lyrics_busy;
-   const status=$("engineStatus");status.classList.toggle("offline",!h.ready);
-   status.innerHTML="<i></i>"+(h.ready?"Модель готова · RTX 4060":"Модель загружается");
-   $("settingsModel").textContent=h.ready?"ACE-Step · RTX 4060":"Инициализация…";
+   const engine=h.engine||{status:h.ready?"connected":"starting",message:""};
+   const status=$("engineStatus");status.classList.toggle("offline",["error","missing"].includes(engine.status));
+   const label=engine.status==="connected"?"ACE-Step доступен":engine.status==="starting"?"Инициализация ACE-Step…":engine.status==="missing"?"ACE-Step не установлен":engine.status==="error"?"Ошибка запуска ACE-Step":"Ожидаем ACE-Step";
+   status.replaceChildren(document.createElement("i"),document.createTextNode(" "+label));
+   status.title=engine.message||label;
+   $("settingsModel").textContent=engine.message||label;
    $("settingsLastJob").textContent=String(h.job?.status||"—");
    refreshJobUI();
+   if(["error","missing"].includes(engine.status)&&!["generating","converting"].includes(state.job?.status)){
+    $("feedJob").hidden=false;
+    $("feedJob").classList.remove("processing");
+    $("feedJob").textContent=engine.message+" Запусти scripts/Diagnose-Windows.ps1 для диагностики.";
+   }
    if(h.job?.status==="done"&&h.job?.id&&state.lastCompleted!==h.job.id){
     state.lastCompleted=h.job.id;if(h.job.files?.length){await loadTracks();toast("Новые треки добавлены в начало списка")}
    }
-  }catch(ex){$("engineStatus").classList.add("offline");$("engineStatus").innerHTML="<i></i> Нет подключения"}
+  }catch(ex){$("engineStatus").classList.add("offline");$("engineStatus").replaceChildren(document.createElement("i"),document.createTextNode(" Нет подключения к Music Studio"));$("engineStatus").title=ex.message||"Сервер не отвечает";$("settingsModel").textContent=ex.message||"Сервер не отвечает"}
   finally{healthBusy=false}
  }
  function refreshJobUI(){

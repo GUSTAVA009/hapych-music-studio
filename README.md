@@ -24,7 +24,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.
 
 Если пока нужна только музыка и интерфейс, запусти установку без флагов `-Full -DownloadModels`. Голосовые функции тогда могут быть недоступны.
 
-**Полная инструкция для всех пользователей:** [УСТАНОВКА WINDOWS](docs/INSTALL_WINDOWS.md). Публичная лицензия оригинального кода: [MIT](LICENSE), сторонние модели распространяются по отдельным условиям: [docs/PUBLIC_DISTRIBUTION.md](docs/PUBLIC_DISTRIBUTION.md).
+**Полная инструкция для всех пользователей:** [УСТАНОВКА WINDOWS](docs/INSTALL_WINDOWS.md). Если при генерации отображается **`Failed to fetch`** или «Ошибка инициализации», запусти **`Diagnose.cmd`** в корне Music Studio: он проверит связь с локальным сервером, наличие ACE-Step, видеокарту и журналы ошибок, затем откроет отчёт. Скрипт не запускает генерацию и не загружает личные файлы в интернет. Подробности: [решение проблем](docs/TROUBLESHOOTING.md). Лицензия оригинального кода: [MIT](LICENSE); [сторонние модели](docs/PUBLIC_DISTRIBUTION.md).
 
 ### Важно про расположение
 

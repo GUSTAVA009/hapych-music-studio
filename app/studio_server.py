@@ -16,11 +16,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse, quote
 
-os.environ["NO_PROXY"] = "127.0.0.1,localhost,::1"
-os.environ["no_proxy"] = os.environ["NO_PROXY"]
-os.environ["HTTP_PROXY"] = ""
-os.environ["HTTPS_PROXY"] = ""
-os.environ["ALL_PROXY"] = ""
+_localhost_proxy_exclusion = "127.0.0.1,localhost,::1"
+for _proxy_key in ("NO_PROXY", "no_proxy"):
+    _present = os.environ.get(_proxy_key, "")
+    os.environ[_proxy_key] = ",".join(x for x in (_present, _localhost_proxy_exclusion) if x)
+# Do not destroy HTTP[S]_PROXY or ALL_PROXY: official ACE-Step checkpoints
+# may require the user's proxy to download on a different computer.
 
 import requests
 from gradio_client import Client, handle_file
@@ -109,7 +110,7 @@ SFT_URL = "http://127.0.0.1:7861"
 COMPOSER_URL = "http://127.0.0.1:7862"
 COMPOSER_BATCH = ROOT / "Music Studio Composer.bat"
 SFT_BATCH = ROOT / "Music Studio SFT HQ.bat"
-PORT = 7870
+PORT = int(os.environ.get("MUSIC_STUDIO_PORT", "7870"))
 MAX_UPLOAD = 90 * 1024 * 1024
 
 for directory in (VOICES, TRACKS, ORIGINALS, MASTERS, INPUTS, BEAT_SAMPLES, NORMALIZED, UI):
@@ -127,47 +128,110 @@ def engine_ok(url=ENGINE_URL):
     except Exception:
         return False
 
+# Separate startup state from the HTTP server: the browser must remain
+# responsive even if model initialization crashes or takes many minutes.
+_engine_start_lock = threading.Lock()
+_engine_process = None
+_engine_start_error = ""
+_engine_started_at = None
+
+def engine_snapshot(connected=None):
+    connected = engine_ok() if connected is None else bool(connected)
+    if connected:
+        status, detail = "connected", "ACE-Step отвечает на локальном порту 7862"
+    elif _engine_start_error:
+        status, detail = "error", _engine_start_error
+    elif _engine_process is not None:
+        exit_code = _engine_process.poll()
+        if exit_code is not None:
+            status, detail = "error", ("ACE-Step завершился с кодом %s. "
+                       "Проверь журнал Music Studio.log и запусти scripts/Diagnose-Windows.ps1." % exit_code)
+        else:
+            status, detail = "starting", "ACE-Step загружается или инициализирует модели"
+    elif not (ENGINE / ".venv" / "Scripts" / "acestep.exe").is_file():
+        status, detail = "missing", "ACE-Step не установлен: запусти Install-Windows.ps1"
+    else:
+        status, detail = "not_started", "ACE-Step ещё не запускался"
+    return {"status": status, "message": detail,
+            "process_alive": bool(_engine_process is not None and _engine_process.poll() is None),
+            "engine_executable_present": (ENGINE / ".venv" / "Scripts" / "acestep.exe").is_file()}
+
 def start_engine():
-    # QA91: the former Music Studio.bat launched on port 7860 while this
-    # server waits on ENGINE_URL (7862), causing an 180 s startup failure.
-    # Start the exact single production engine on the port we actually use.
+    global _engine_process, _engine_start_error, _engine_started_at
+    # Do not create duplicate ACE-Step processes while the first one is
+    # downloading/initializing. Gradio /config is not immediate on first launch.
     if engine_ok():
         return
+    if _engine_process is not None:
+        exit_code = _engine_process.poll()
+        if exit_code is None:
+            return
+        _engine_start_error = ("ACE-Step завершился при запуске (код %s). "
+                             "Запусти scripts/Diagnose-Windows.ps1 и проверь Music Studio.log." % exit_code)
+        raise RuntimeError(_engine_start_error)
     executable = ENGINE / ".venv" / "Scripts" / "acestep.exe"
     if not executable.is_file():
-        raise RuntimeError("ACE-Step executable is missing from the installed environment.")
+        _engine_start_error = ("Не найден ACE-Step. Запусти "
+                               "scripts/Install-Windows.ps1 и scripts/Diagnose-Windows.ps1.")
+        raise RuntimeError(_engine_start_error)
+    # Let ACE-Step auto-detect GPU/CPU, VRAM, LLM size, quantization and
+    # offloading. Previous hard-coded RTX/CUDA and 1.7B LLM broke other PCs.
+    # Keep PyTorch LM backend for broad Windows GPU compatibility.
     arguments = [
         str(executable), "--port", "7862", "--server-name", "127.0.0.1",
         "--language", "en", "--config_path", "acestep-v15-turbo",
-        "--lm_model_path", "acestep-5Hz-lm-1.7B", "--backend", "pt",
-        "--init_service", "true", "--init_llm", "true",
-        "--offload_to_cpu", "true", "--offload_dit_to_cpu", "true",
-        "--quantization", "none", "--batch_size", "1",
+        "--backend", "pt", "--init_service", "true", "--batch_size", "1",
     ]
     environment = os.environ.copy()
-    environment.update(PYTHONUTF8="1", CHECK_UPDATE="false",
-                       NO_PROXY="127.0.0.1,localhost,::1",
-                       no_proxy="127.0.0.1,localhost,::1",
-                       CUDA_VISIBLE_DEVICES="0")
-    with LOG.open("a", encoding="utf-8", errors="replace") as stream:
-        stream.write("\n===== QA91 AUTO-START TURBO 7862 =====\n")
-        stream.flush()
-        subprocess.Popen(arguments, cwd=str(ENGINE),
+    environment.update(PYTHONUTF8="1", CHECK_UPDATE="false")
+    try:
+        with LOG.open("a", encoding="utf-8", errors="replace") as stream:
+            stream.write("\n===== ACE-STEP AUTO DEVICE / AUTO LLM / PORT 7862 =====\n")
+            stream.flush()
+            process = subprocess.Popen(arguments, cwd=str(ENGINE),
                          stdin=subprocess.DEVNULL, stdout=stream,
                          stderr=subprocess.STDOUT, env=environment,
-                         creationflags=subprocess.CREATE_NO_WINDOW)
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        _engine_process = process
+        _engine_started_at = datetime.now().isoformat()
+        _engine_start_error = ""
+    except Exception as exc:
+        _engine_start_error = ("ACE-Step не удалось запустить (%s). "
+                             "Запусти scripts/Diagnose-Windows.ps1." % type(exc).__name__)
+        raise
 
-_engine_start_lock = threading.Lock()
+def _background_start_engine():
+    global _engine_start_error
+    with _engine_start_lock:
+        try:
+            start_engine()
+        except Exception:
+            with WEBLOG.open("a", encoding="utf-8") as log:
+                traceback.print_exc(file=log)
 
 def ensure_unified_engine():
-    if engine_ok(): return
+    global _engine_start_error
+    if engine_ok():
+        return
     with _engine_start_lock:
-        if engine_ok(): return
+        if engine_ok():
+            return
         start_engine()
-        for _ in range(180):
-            if engine_ok(): return
-            time.sleep(1)
-        raise RuntimeError("Единый движок не запустился. Открой журнал в настройках.")
+        # First-run model downloads can be much longer than the old 180 sec.
+        max_wait = max(90, min(3600, int(os.environ.get("MUSIC_STUDIO_ENGINE_WAIT_SECONDS", "1200"))))
+        deadline = time.monotonic() + max_wait
+        while time.monotonic() < deadline:
+            if engine_ok():
+                return
+            if _engine_process is not None:
+                exit_code = _engine_process.poll()
+                if exit_code is not None:
+                    _engine_start_error = ("ACE-Step завершился с кодом %s при инициализации. "
+                      "Проверь Music Studio.log и запусти scripts/Diagnose-Windows.ps1." % exit_code)
+                    raise RuntimeError(_engine_start_error)
+            time.sleep(2)
+        raise RuntimeError("ACE-Step не ответил за %s секунд. Возможно, модели скачиваются "
+            "или видеокарте не хватает памяти. Запусти scripts/Diagnose-Windows.ps1." % max_wait)
 
 def copy_job():
     with lock:
@@ -646,7 +710,40 @@ def generate_worker(data, job_id):
             traceback.print_exc(file=logfile)
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "MusicStudio/1.8"
+    server_version = "MusicStudio/1.9"
+
+    def _report_internal_error(self, exc):
+        error_id = uuid.uuid4().hex[:10]
+        try:
+            with WEBLOG.open("a", encoding="utf-8") as logfile:
+                logfile.write("\n[SERVER_ERROR %s] %s %s: %s\n" %
+                              (error_id, self.command, urlparse(self.path).path, type(exc).__name__))
+                traceback.print_exc(file=logfile)
+        except Exception:
+            pass
+        try:
+            self.json(500, {"error": "Ошибка сервера Music Studio (%s, %s). "
+                "Не запускай генерацию повторно вслепую; запусти scripts/Diagnose-Windows.ps1 "
+                "и посмотри app/studio-server.log." % (type(exc).__name__, error_id),
+                "error_id": error_id, "error_type": type(exc).__name__})
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
+            pass
+
+    def do_GET(self):
+        try:
+            return self._do_GET()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return
+        except Exception as exc:
+            return self._report_internal_error(exc)
+
+    def do_POST(self):
+        try:
+            return self._do_POST()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            return
+        except Exception as exc:
+            return self._report_internal_error(exc)
     def log_message(self, fmt, *args):
         with WEBLOG.open("a", encoding="utf-8") as logfile:
             logfile.write("[%s] %s\n" % (datetime.now().strftime("%H:%M:%S"), fmt % args))
@@ -712,7 +809,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.do_GET()
 
-    def do_GET(self):
+    def _do_GET(self):
         address = urlparse(self.path)
         path = address.path
         if path == "/api/sfx/catalog":
@@ -732,8 +829,20 @@ class Handler(BaseHTTPRequestHandler):
             if sample is None or not sample.is_file():return self.json(404, {"error":"Аудиоэффект не найден"})
             return self.send_file(sample)
         if path == "/api/health":
-            return self.json(200, {"ready": engine_ok(), "name": "Music Studio",
-                                   "job": copy_job(), "version": "1.8", "production_patch": "qa90-native-style-default+voice-profile-alerts+ru-vocal51-guard+qa100-readonly-preview", "training23": training_reservation23.status(), "training41": training41_guard.status(), "training32": training32_guard.status(), "lyrics_busy": workflow.lyrics_active()})
+            connected = engine_ok()
+            return self.json(200, {"ready": connected, "server_ready": True, "name": "Music Studio",
+                                   "engine": engine_snapshot(connected),
+                                   "job": copy_job(), "version": "1.9", "production_patch": "win-auto-device+json-error+diagnostics",
+                                   "training23": training_reservation23.status(), "training41": training41_guard.status(),
+                                   "training32": training32_guard.status(), "lyrics_busy": workflow.lyrics_active()})
+        if path == "/api/diagnostics":
+            # Loopback-only low-risk summary. Never include personal paths,
+            # reference audio, generated lyrics or raw private log contents.
+            return self.json(200, {"ok": True, "version": "1.9",
+                                   "local_server": True, "engine": engine_snapshot(),
+                                   "generator_installed": (ENGINE / ".venv" / "Scripts" / "acestep.exe").is_file(),
+                                   "job_status": copy_job().get("status"),
+                                   "diagnostic_command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Diagnose-Windows.ps1"})
         if path == "/api/presets/two-shores":
             preset_path = APP / "presets" / "two_shores.json"
             if not preset_path.is_file():
@@ -861,7 +970,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(UI / path[1:])
         self.json(404, {"error": "Страница не найдена"})
 
-    def do_POST(self):
+    def _do_POST(self):
         address = urlparse(self.path)
         path = address.path
         reserved = training_reservation23.status()
@@ -1080,7 +1189,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.json(404, {"error": "Неизвестная команда"})
 
 def main():
-    threading.Thread(target=start_engine, daemon=True).start()
+    if os.environ.get("MUSIC_STUDIO_DISABLE_ENGINE_AUTOSTART") != "1":
+        threading.Thread(target=_background_start_engine, daemon=True).start()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     server.daemon_threads = True
     print("MUSIC STUDIO READY http://127.0.0.1:%d" % PORT, flush=True)

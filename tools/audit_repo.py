@@ -3,8 +3,15 @@ Never prints possible credentials or user data, only offending filenames.
 Does not read .git objects or user audio. Windows / stdlib-only.
 """
 from pathlib import Path
-import ast,json,re,sys
+import ast,json,re,sys,subprocess
 repo=Path(__file__).resolve().parent.parent
+# Inspect files that Git will actually publish, not ignored local diagnostic
+# logs written by the no-model HTTP regression tests on developers' PCs.
+tracked=None
+if (repo/'.git').exists():
+ p=subprocess.run(['git','-C',str(repo),'ls-files','--cached','-z'],capture_output=True)
+ if p.returncode==0:
+  tracked={x.decode('utf-8') for x in p.stdout.split(b'\0') if x}
 blocked_dir={"__pycache__",".git",".venv","node_modules","checkpoints","Cache",
  "cache","Training Runs","Voice Profiles","Мой голос","Мои треки","Мастер WAV",
  "Исходные версии","Sound Library","Models","models","dataset","datasets","runs",
@@ -25,6 +32,7 @@ patterns={
 errors=[]
 count=0
 for file in repo.rglob("*"):
+ if tracked is not None and file.relative_to(repo).as_posix() not in tracked:continue
  if any(p in blocked_dir for p in file.relative_to(repo).parts):continue
  if not file.is_file():continue
  if file.is_symlink():errors.append((str(file.relative_to(repo)),"symlink"));continue
@@ -51,7 +59,7 @@ for file in repo.rglob("*"):
  if file.suffix.lower() in (".py",".pyw"):
   try:ast.parse(text)
   except SyntaxError:errors.append((str(rel),"Python syntax error"))
-required=["README.md","LICENSE","Install.cmd","scripts/Bootstrap-Windows.ps1","docs/INSTALL_WINDOWS.md","docs/MIGRATE_DATA.md",
+required=["README.md","LICENSE","Install.cmd","Diagnose.cmd","scripts/Diagnose-Windows.ps1","scripts/Bootstrap-Windows.ps1","docs/INSTALL_WINDOWS.md","docs/MIGRATE_DATA.md",
  "scripts/Install-Windows.ps1","scripts/Start-MusicStudio.ps1",
  "app/studio_server.py","app/ui/index.html",
  "overlays/apexsvc_custom.patch","third_party_versions.json",
