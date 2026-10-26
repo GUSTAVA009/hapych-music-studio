@@ -38,8 +38,15 @@ if($Smoke -and $errors.Count -eq 0){
   else{
     try{
       $health=Invoke-RestMethod 'http://127.0.0.1:7870/api/health' -TimeoutSec 9
-      if(-not $health.ready){$errors.Add('Web server is not ready')}
-      else{Write-Host '[OK] Music Studio health endpoint responds.' -ForegroundColor Green}
+      if(-not ($health.server_ready -or $health.name -eq 'Music Studio')){
+        $errors.Add('Web server does not respond with a valid Music Studio health result')
+      }else{
+        Write-Host '[OK] Music Studio web server responds.' -ForegroundColor Green
+        if(-not $health.ready){
+          Warn 'ACE-Step is not ready yet. Model initialization/download is separate from the web server.'
+          if($health.engine){Warn $health.engine.message}
+        }
+      }
     }catch{$errors.Add('Cannot query local Music Studio health endpoint')}
   }
 }

@@ -87,13 +87,27 @@ Require-Command 'ffmpeg' 'https://ffmpeg.org/download.html'
 if($repo.TrimEnd('\') -ine $expected.TrimEnd('\')){
   throw "Clone to '$expected'. Some Music Studio modules expect that directory; actual: $repo"
 }
+# Never mutate Python environments while the local music server or ACE-Step
+# are running. This can crash a user's in-progress generation or corrupt DLLs.
+foreach($port in @(7870,7862)){
+  $socket=New-Object System.Net.Sockets.TcpClient
+  try{
+    $connect=$socket.BeginConnect('127.0.0.1',$port,$null,$null)
+    if($connect.AsyncWaitHandle.WaitOne(350)){
+      try{$socket.EndConnect($connect)}catch{}
+      if($socket.Connected){
+        throw "Music Studio / ACE-Step is still running on port $port. Close Music Studio and its ACE-Step processes before updating; then rerun Install.cmd. No user data has been modified."
+      }
+    }
+  }finally{$socket.Close()}
+}
 $env:PYTHONUTF8='1'
 $env:HF_HUB_DISABLE_XET='1'
 Invoke-Step 'Python 3.11 for ACE-Step' { & uv python install 3.11 }
 $ace=Join-Path $repo 'ACE-Step-1.5'
 Install-Pinned 'ace-step' $ace
 Push-Location $ace
-try{Invoke-Step 'ACE-Step v1.5 dependencies (large download)' { & uv sync --project $ace --frozen --python 3.11 }}
+try{Invoke-Step 'ACE-Step v1.5 dependencies (preserve Studio extras)' { & uv sync --project $ace --frozen --inexact --python 3.11 }}
 finally{Pop-Location}
 $acePython=Join-Path $ace '.venv\Scripts\python.exe'
 if(-not(Test-Path $acePython)){throw 'ACE-Step Python executable not found'}
@@ -118,15 +132,10 @@ if($Full){
   Install-Pinned 'seed-vc' $seed
   Install-Pinned 'apexsvc' $apex
   $overlay=Join-Path $repo 'overlays\seed-vc'
-  Get-ChildItem $overlay -Recurse -File -Filter '*.py'|ForEach-Object{
-    $relative=$_.FullName.Substring($overlay.Length).TrimStart('\')
-    $target=Join-Path $seed $relative
-    New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent)|Out-Null
-    if(Test-Path $target){
-      $a=(Get-FileHash $_.FullName -Algorithm SHA256).Hash
-      $b=(Get-FileHash $target -Algorithm SHA256).Hash
-      if($a -ne $b){throw "Seed-VC patch conflicts with existing file: $relative"}
-    }else{Copy-Item $_.FullName $target}
+  $overlayInstaller=Join-Path $repo 'tools\install_seed_overlays.py'
+  if(-not(Test-Path $overlayInstaller)){throw 'Seed-VC overlay installer missing.'}
+  Invoke-Step 'Install/update HAPYCH Seed-VC modules with safe backups' {
+    & $acePython -X utf8 $overlayInstaller --seed-root $seed --overlay $overlay --expected-commit $versions.'seed-vc'.commit
   }
   $patch=Join-Path $repo 'overlays\apexsvc_custom.patch'
   $patcher=Join-Path $repo 'tools\apply_apex_patch.py'
@@ -155,9 +164,20 @@ if($Full){
   Invoke-Step 'Install pinned voice-engine packages (PyPI + PyTorch CUDA 12.1)' {
     & uv pip install --python $voicePython --default-index 'https://pypi.org/simple' --torch-backend cu121 -r (Join-Path $repo 'requirements\voice-engine-win-lock.txt')
   }
+  # Resemblyzer 0.1.4 declares webrtcvad>=2.0.10, but PyPI distributes
+  # webrtcvad as source-only on Windows. Its native C extension fails to
+  # build on machines without Visual Studio C++ Build Tools. We explicitly
+  # installed webrtcvad-wheels above (provides import webrtcvad). Avoid
+  # pulling the obsolete source package and typing backport on Python 3.11.
+  Invoke-Step 'Install Resemblyzer without obsolete source dependencies' {
+    & uv pip install --python $voicePython --default-index 'https://pypi.org/simple' --no-deps --only-binary :all: 'resemblyzer==0.1.4'
+  }
+  Invoke-Step 'Verify voice dependencies + native audio libraries' {
+    & $voicePython -X utf8 (Join-Path $repo 'tools\verify_voice_runtime.py')
+  }
   Invoke-Step 'Install Python 3.10 for ApexSVC' { & uv python install 3.10 }
   Push-Location $apex
-  try{Invoke-Step 'Install ApexSVC pinned environment' { & uv sync --project $apex --frozen --python 3.10 }}
+  try{Invoke-Step 'Install ApexSVC pinned environment' { & uv sync --project $apex --frozen --inexact --python 3.10 }}
   finally{Pop-Location}
   if($DownloadModels){
     Push-Location $apex

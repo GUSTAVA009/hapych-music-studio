@@ -48,7 +48,14 @@ jobs:
           $venv = Join-Path $env:RUNNER_TEMP 'hapych-voice-index-qa'
           uv venv --python 3.11 $venv
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          uv pip install --dry-run --python (Join-Path $venv 'Scripts\python.exe') --default-index https://pypi.org/simple --torch-backend cu121 -r requirements/voice-engine-win-lock.txt
+          uv pip install --dry-run --only-binary webrtcvad --python (Join-Path $venv 'Scripts\python.exe') --default-index https://pypi.org/simple --torch-backend cu121 -r requirements/voice-engine-win-lock.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Build and test the *actual* Windows wheels, without downloading 5 GiB of torch.
+          uv pip install --python (Join-Path $venv 'Scripts\python.exe') --default-index https://pypi.org/simple --no-deps --only-binary :all: 'webrtcvad-wheels==2.0.14.post1' 'resemblyzer==0.1.4'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & (Join-Path $venv 'Scripts\python.exe') -X utf8 -c "import importlib.metadata as m, webrtcvad; assert m.version('resemblyzer') == '0.1.4'; assert m.version('webrtcvad-wheels') == '2.0.14.post1'; assert webrtcvad.Vad(1).is_speech(bytes(320),16000) == False; print('Prebuilt Windows WebRTC VAD and Resemblyzer wheels OK')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -X utf8 tests/test_voice_win_install.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build ZIP, check CRC, extract and verify SHA-256 of all files
         shell: pwsh
@@ -72,6 +79,12 @@ jobs:
       - name: 'Regression: ApexSVC patch clean, existing, partial, CRLF and conflicts'
         shell: pwsh
         run: python -X utf8 tests/test_apex_patch.py
+      - name: 'Regression: Windows PATH refresh stays stable on repeated bootstrap'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Bootstrap-Path.ps1
+      - name: 'Regression: Seed-VC overlays install, update, back up and protect user edits'
+        shell: pwsh
+        run: python -X utf8 tests/test_seed_overlays.py
       - name: Upload source-only ZIP from passing checks
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4

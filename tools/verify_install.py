@@ -58,6 +58,7 @@ def main() -> int:
     # Static syntax of every published Python module: does not start any
     # server, touch user recordings or load GPU models.
     count=0
+    parse_errors=[]
     for folder in ("app","Voice Engine","Text Engine"):
         dirpath=root/folder
         if not dirpath.exists():continue
@@ -66,8 +67,10 @@ def main() -> int:
                 continue
             count+=1
             try:ast.parse(file.read_text(encoding="utf-8-sig"))
-            except Exception as ex:errors.append(f"Python syntax {file.relative_to(root)}: {ex}")
-    checks.append({"name":"static Python syntax","ok":True,"details":f"{count} source modules scanned"})
+            except Exception as ex:parse_errors.append(f"Python syntax {file.relative_to(root)}: {ex}")
+    errors.extend(parse_errors)
+    checks.append({"name":"static Python syntax","ok":not parse_errors,
+                   "details":f"{count} source modules scanned, {len(parse_errors)} syntax issues"})
     # The active HTML must not point to absent local JS/CSS files.
     html=(root/"app/ui/index.html").read_text(encoding="utf-8-sig")
     for local in re.findall(r'(?:src|href)="(/[^"?#]+\.(?:js|css))',html):
@@ -75,11 +78,18 @@ def main() -> int:
     # Required dynamic modules in their respective isolated Python envs.
     def imports(python,modules,name):
         if not python.exists():return
-        snippet=("import importlib.util,sys; import sys as _s; "
-                 "missing=[x for x in sys.argv[1:] if importlib.util.find_spec(x) is None];"
-                 "print(','.join(missing)); sys.exit(2 if missing else 0)")
+        # Import modules, don't just check find_spec: native Windows DLLs for
+        # torch/torchaudio may exist but fail during the real import.
+        snippet=(
+            "import importlib,sys\n"
+            "failed=[]\n"
+            "for name in sys.argv[1:]:\n"
+            " try: importlib.import_module(name)\n"
+            " except Exception as e: failed.append(name+': '+type(e).__name__+': '+str(e)[:170])\n"
+            "print(' | '.join(failed) if failed else 'Imports passed: '+', '.join(sys.argv[1:]))\n"
+            "sys.exit(1 if failed else 0)\n")
         proc=subprocess.run([str(python),"-X","utf8","-c",snippet,*modules],capture_output=True,
-                            text=True,timeout=45)
+                            text=True,timeout=95)
         check("import modules "+name,proc.returncode==0,
               proc.stdout.strip() or proc.stderr[-280:])
     imports(root/"ACE-Step-1.5/.venv/Scripts/python.exe",
@@ -89,6 +99,16 @@ def main() -> int:
                 ["torch","torchaudio","soundfile","librosa","transformers","huggingface_hub"],"SeedVC")
         imports(root/"Voice Engine/alternatives/ApexSVC/.venv/Scripts/python.exe",
                 ["torch","soundfile","resampy","librosa","huggingface_hub"],"ApexSVC")
+        runtime = root/"tools/verify_voice_runtime.py"
+        if not runtime.is_file():
+            check("Voice Engine native audio check", False, "Missing tools/verify_voice_runtime.py")
+        else:
+            voice_python = root/"Voice Engine/.venv/Scripts/python.exe"
+            if voice_python.is_file():
+                proc=subprocess.run([str(voice_python),"-X","utf8",str(runtime)],
+                    capture_output=True,text=True,timeout=90)
+                check("Voice Engine actual native audio + Resemblyzer runtime",
+                    proc.returncode==0, (proc.stdout or proc.stderr)[-600:])
     if args.models:
         c=root/"ACE-Step-1.5/checkpoints"
         for name in ("acestep-v15-turbo","acestep-5Hz-lm-1.7B","vae","Qwen3-Embedding-0.6B"):

@@ -25,7 +25,16 @@ function Refresh-Path {
     "$env:USERPROFILE\.local\bin",
     "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
   )
-  $env:Path=($current+';'+$machine+';'+$user+';'+($extra -join ';'))
+  # Must be idempotent: this helper is called repeatedly during setup.
+  # Re-appending the entire system PATH on every call can exceed Windows'
+  # process environment limit and make git/uv/FFmpeg mysteriously disappear.
+  $seen=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+  $parts=New-Object 'System.Collections.Generic.List[string]'
+  foreach($part in (($current+';'+$machine+';'+$user+';'+($extra -join ';')) -split ';')){
+    $clean=$part.Trim()
+    if($clean -and $seen.Add($clean.TrimEnd('\'))){[void]$parts.Add($clean)}
+  }
+  $env:Path=($parts -join ';')
 }
 function Program-Found([string]$name) {
   Refresh-Path
@@ -141,7 +150,19 @@ if($missing.Count){
 }
 $disk=[IO.Path]::GetPathRoot($target)
 $free=(New-Object System.IO.DriveInfo($disk)).AvailableFreeSpace
-$min=if($Full -or $DownloadModels){20GB}else{8GB}
+# For brand-new installs, protect users from running out of disk mid-download.
+# For a *repeat* install, do not demand 20 GiB if most models are cached.
+$mainCached=Test-Path (Join-Path $target 'ACE-Step-1.5\checkpoints\acestep-v15-turbo')
+$voiceCached=(Test-Path (Join-Path $target 'Voice Engine\alternatives\ApexSVC\checkpoints\WavLM-Large.pt')) -and
+             (Test-Path (Join-Path $target 'Voice Engine\alternatives\ApexSVC\checkpoints\G_150k.pt'))
+if($Full -or $DownloadModels){
+  if($mainCached -and $voiceCached){$min=3GB}
+  elseif($mainCached){$min=10GB}
+  else{$min=20GB}
+}else{
+  $min=if($mainCached){2GB}else{8GB}
+}
+Write-Host ('Free disk space: {0:N1} GiB; minimum for this install state: {1:N0} GiB' -f ($free/1GB),($min/1GB))
 if($free -lt $min){
   throw ("Insufficient free space on {0}: {1:N1} GiB free; at least {2:N0} GiB required before downloading models." -f $disk,($free/1GB),($min/1GB))
 }

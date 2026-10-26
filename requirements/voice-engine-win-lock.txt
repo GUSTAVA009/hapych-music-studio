@@ -82,7 +82,11 @@ randomname==0.2.1
 rapidfuzz==3.14.6
 regex==2026.9.29
 requests==2.34.2
-resemblyzer==0.1.4
+# Resemblyzer is installed separately with --no-deps on Windows.
+# Its upstream metadata requires `webrtcvad`, which ships source-only on
+# Windows and fails without Microsoft C++ Build Tools. The compatible
+# `webrtcvad-wheels` package below provides the same Python import instead.
+# See scripts/Install-Windows.ps1 and tests/test_voice_win_install.py.
 retrying==1.4.2
 rich==15.0.0
 safetensors==0.8.0
