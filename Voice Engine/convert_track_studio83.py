@@ -79,9 +79,9 @@ def main():
             say('Внимание: референс слишком короткий; качество переноса тембра может ухудшиться.')
         vocals,backing=split_stems(source,work/'stems')
         converted=work/'converted';converted.mkdir()
-        command=[PYTHON,'inference_studio51.py','--source',vocals,'--target',target,'--output',converted,'--diffusion-steps',str(a.steps),'--f0-condition','True','--fp16','True','--auto-f0-adjust','False','--semi-tone-shift','0','--register',a.register,'--seed',str(a.seed),'--acoustic-prompt-seconds','18.0','--inference-cfg-rate','0.90']
+        command=[PYTHON,'inference_studio51.py','--source',vocals,'--target',target,'--output',converted,'--diffusion-steps',str(a.steps),'--f0-condition','True','--fp16',('True' if __import__('torch').cuda.is_available() else 'False'),'--auto-f0-adjust','False','--semi-tone-shift','0','--register',a.register,'--seed',str(a.seed),'--acoustic-prompt-seconds','18.0','--inference-cfg-rate','0.90']
         if a.trained:
-            folder=VOICE/'runs'/'alex_clean_qa44_v2'
+            folder=Path(os.environ.get('MUSIC_STUDIO_TRAINED_CHECKPOINT_DIR',str(VOICE/'runs'/'personal_ft')))
             checkpoint=folder/'ft_model.pth'
             config=folder/'config_dit_mel_seed_uvit_whisper_base_f0_44k.yml'
             if not checkpoint.is_file() or not config.is_file():raise FileNotFoundError('Не найдена персональная модель с её конфигурацией.')

@@ -10,7 +10,7 @@ blocked_dir={"__pycache__",".git",".venv","node_modules","checkpoints","Cache",
  "Исходные версии","Sound Library","Models","models","dataset","datasets","runs",
  "training_dataset","Diagnostics","Exports","Backups"}
 allowed_extensions={".py",".pyw",".js",".css",".html",".md",".json",".yml",".yaml",
- ".txt",".toml",".ini",".bat",".ps1",".patch",".cs",".csproj",".ico",".gitignore",
+ ".txt",".toml",".ini",".bat",".cmd",".ps1",".patch",".cs",".csproj",".ico",".gitignore",
  ".gitattributes"}
 bad_suffix={".wav",".mp3",".flac",".ogg",".m4a",".safetensors",".ckpt",".pth",
  ".pt",".onnx",".bin",".pem",".key",".p12",".pfx",".env",".zip",".sqlite"}
@@ -33,7 +33,7 @@ for file in repo.rglob("*"):
   errors.append((str(rel),"prohibited user/model/binary extension"));continue
  if file.name.startswith(".") and file.name not in (".gitignore",".gitattributes"):
   errors.append((str(rel),"hidden file"));continue
- if file.suffix.lower() not in allowed_extensions and file.name not in (".gitignore",".gitattributes"):
+ if file.suffix.lower() not in allowed_extensions and file.name not in (".gitignore",".gitattributes","LICENSE"):
   errors.append((str(rel),"unexpected extension"));continue
  if file.stat().st_size>2_000_000:
   errors.append((str(rel),"oversized source file"));continue
@@ -51,7 +51,7 @@ for file in repo.rglob("*"):
  if file.suffix.lower() in (".py",".pyw"):
   try:ast.parse(text)
   except SyntaxError:errors.append((str(rel),"Python syntax error"))
-required=["README.md","docs/INSTALL_WINDOWS.md","docs/MIGRATE_DATA.md",
+required=["README.md","LICENSE","Install.cmd","scripts/Bootstrap-Windows.ps1","docs/INSTALL_WINDOWS.md","docs/MIGRATE_DATA.md",
  "scripts/Install-Windows.ps1","scripts/Start-MusicStudio.ps1",
  "app/studio_server.py","app/ui/index.html",
  "overlays/apexsvc_custom.patch","third_party_versions.json",

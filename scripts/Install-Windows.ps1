@@ -1,26 +1,24 @@
 ﻿#Requires -Version 5.1
 <#
-Windows install from private source-only GitHub repository.
+Windows installation from the public HAPYCH Music Studio source repository.
 Clone to %USERPROFILE%\Music Studio before running.
 Does NOT export/import voice recordings, track libraries, secrets or weights.
 #>
 [CmdletBinding()]
-param([switch]$Full,[switch]$DownloadModels)
+param([switch]$Full,[switch]$DownloadModels,[switch]$ValidateOnly)
 $ErrorActionPreference='Stop'
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $expected=[IO.Path]::GetFullPath((Join-Path $HOME 'Music Studio'))
-if($repo.TrimEnd('\') -ine $expected.TrimEnd('\')){
-  throw "Clone to '$expected'. Some Music Studio modules expect that directory; actual: $repo"
-}
 if($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows){
   throw 'Windows 10/11 required'
 }
 function Require-Command([string]$name,[string]$help){
   if(-not(Get-Command $name -ErrorAction SilentlyContinue)){throw "$name not found. $help"}
 }
-Require-Command 'git' 'https://git-scm.com/download/win'
-Require-Command 'uv' 'https://docs.astral.sh/uv/getting-started/installation/'
-Require-Command 'ffmpeg' 'https://ffmpeg.org/download.html'
+if([IntPtr]::Size -ne 8){throw '64-bit Windows is required for the AI models.'}
+if(-not(Test-Path (Join-Path $repo 'app\ui\index.html'))){throw 'UI source missing. Download a complete Music Studio archive.'}
+$versionFile=Join-Path $repo 'third_party_versions.json'
+if(-not(Test-Path $versionFile)){throw 'Missing third_party_versions.json (incomplete archive or clone).'}
 $versions=Get-Content (Join-Path $repo 'third_party_versions.json') -Raw -Encoding UTF8|ConvertFrom-Json
 function Invoke-Step([string]$label,[scriptblock]$command){
   Write-Host "[$label]" -ForegroundColor Cyan
@@ -77,13 +75,36 @@ function Install-Pinned([string]$key,[string]$folder){
   }
 }
 Write-Host 'HAPYCH Music Studio / Windows installation' -ForegroundColor Green
+Write-Host "Project: $repo" -ForegroundColor Cyan
+if($ValidateOnly){
+  Write-Host '[OK] Source files and required commands are accessible.' -ForegroundColor Green
+  Write-Host '[INFO] -ValidateOnly does not download models or modify any files.'
+  exit 0
+}
+Require-Command 'git' 'https://git-scm.com/download/win'
+Require-Command 'uv' 'https://docs.astral.sh/uv/getting-started/installation/'
+Require-Command 'ffmpeg' 'https://ffmpeg.org/download.html'
+if($repo.TrimEnd('\') -ine $expected.TrimEnd('\')){
+  throw "Clone to '$expected'. Some Music Studio modules expect that directory; actual: $repo"
+}
+$env:PYTHONUTF8='1'
+$env:HF_HUB_DISABLE_XET='1'
+Invoke-Step 'Python 3.11 for ACE-Step' { & uv python install 3.11 }
 $ace=Join-Path $repo 'ACE-Step-1.5'
 Install-Pinned 'ace-step' $ace
 Push-Location $ace
-try{Invoke-Step 'ACE-Step v1.5 dependencies (large download)' { & uv sync --project $ace --frozen }}
+try{Invoke-Step 'ACE-Step v1.5 dependencies (large download)' { & uv sync --project $ace --frozen --python 3.11 }}
 finally{Pop-Location}
 $acePython=Join-Path $ace '.venv\Scripts\python.exe'
 if(-not(Test-Path $acePython)){throw 'ACE-Step Python executable not found'}
+if(-not(Test-Path (Join-Path $ace '.venv\Scripts\acestep.exe'))){throw 'ACE-Step installation incomplete: missing acestep.exe'}
+if($DownloadModels){
+  $downloader=Join-Path $ace '.venv\Scripts\acestep-download.exe'
+  if(-not(Test-Path $downloader)){throw 'ACE-Step downloader missing.'}
+  Push-Location $ace
+  try{Invoke-Step 'Download official ACE-Step main and LLM models' { & $downloader }}
+  finally{Pop-Location}
+}
 Invoke-Step 'Music Studio app extras' {
   & uv pip install --python $acePython -r (Join-Path $repo 'requirements\studio-extra.txt')
 }
@@ -120,7 +141,7 @@ if($Full){
     Invoke-Step 'Create voice-engine venv' { & uv venv --python 3.11 $voiceEnv }
   }
   Invoke-Step 'Install pinned voice-engine packages + CUDA 12.8' {
-    & uv pip install --python $voicePython --extra-index-url 'https://download.pytorch.org/whl/cu128' -r (Join-Path $repo 'requirements\voice-engine-win-lock.txt')
+    & uv pip install --python $voicePython --extra-index-url 'https://download.pytorch.org/whl/cu121' -r (Join-Path $repo 'requirements\voice-engine-win-lock.txt')
   }
   Invoke-Step 'Install Python 3.10 for ApexSVC' { & uv python install 3.10 }
   Push-Location $apex
@@ -128,8 +149,23 @@ if($Full){
   finally{Pop-Location}
   if($DownloadModels){
     Push-Location $apex
-    try{Invoke-Step 'Download ApexSVC model weights' { & uv run --no-sync python scripts/download_models.py }}
+    try{
+      $apexPython=Join-Path $apex '.venv\Scripts\python.exe'
+      if(-not(Test-Path $apexPython)){throw 'ApexSVC venv missing'}
+      Invoke-Step 'Download ApexSVC model weights' { & $apexPython scripts/download_models.py }
+      foreach($name in @('G_150k.pt','WavLM-Large.pt')){
+        $model=Join-Path $apex ('checkpoints\'+$name)
+        if(-not(Test-Path $model) -or (Get-Item $model).Length -lt 20000000){throw "ApexSVC model is missing or incomplete: $name"}
+      }
+    }
     finally{Pop-Location}
+    $voicePy=Join-Path $repo 'Voice Engine\.venv\Scripts\python.exe'
+    $seedDownloader=Join-Path $repo 'tools\download_seed_models.py'
+    if(Test-Path $seedDownloader){
+      Push-Location $seed
+      try{Invoke-Step 'Download Seed-VC public pretrained models' { & $voicePy -X utf8 $seedDownloader --seed-root $seed }}
+      finally{Pop-Location}
+    }
   }
 }
 Write-Host ''

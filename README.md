@@ -2,11 +2,13 @@
 
 Локальная музыкальная студия для Windows: генерация музыки и русского вокала, библиотека треков, интерфейс создания песен, инструменты обработки звука, голосовые профили и экспериментальный перенос тембра.
 
-> **Статус:** приватный архив исходного кода текущего проекта с инструкцией восстановления на другом ПК. Это не готовый «портативный EXE». Зависимости, внешние движки и веса моделей устанавливаются отдельно. Установка на чистом втором ПК ещё не проверена от начала до конца.
+> **Статус:** публичная тестовая версия для Windows 10/11 x64. Программу может бесплатно скачать любой пользователь. Это открытые исходники с автоматическими установщиками, но не один EXE: внешние AI-модели скачиваются отдельно. Испытания на чистом втором компьютере со всеми GPU-моделями ещё не завершены.
 
 ## 🚀 Установка на Windows
 
-Нужны Windows 10/11 x64, [Git](https://git-scm.com/download/win), [uv](https://docs.astral.sh/uv/getting-started/installation/), [FFmpeg](https://ffmpeg.org/download.html) и интернет. Желательна видеокарта NVIDIA с подходящими драйверами. На диске потребуются десятки гигабайт для зависимостей и моделей.
+**Самый простой вариант (без команд):** нажми **Code → Download ZIP** на этой странице GitHub, распакуй архив полностью и дважды нажми **`Install.cmd`**. Мастер проверит/установит Git, uv и FFmpeg, скачает сторонние движки и модели, затем проверит запуск Music Studio. Для установки нужен интернет и достаточно места на диске.
+
+**Для установки через Git:** нужны Windows 10/11 x64, [Git](https://git-scm.com/download/win), [uv](https://docs.astral.sh/uv/getting-started/installation/), [FFmpeg](https://ffmpeg.org/download.html). Рекомендуется NVIDIA GPU 6–8 ГБ VRAM и 30–50 ГБ свободного места.
 
 В **PowerShell**:
 
@@ -14,7 +16,7 @@
 git clone https://github.com/GUSTAVA009/hapych-music-studio.git "$env:USERPROFILE\Music Studio"
 Set-Location "$env:USERPROFILE\Music Studio"
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1 -Full -DownloadModels
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Install.ps1 -CheckVoice
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Install.ps1 -CheckVoice -CheckModels -Smoke
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.ps1
 ~~~
 
@@ -22,7 +24,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.
 
 Если пока нужна только музыка и интерфейс, запусти установку без флагов `-Full -DownloadModels`. Голосовые функции тогда могут быть недоступны.
 
-**Полная пошаговая инструкция:** [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md).
+**Полная инструкция для всех пользователей:** [УСТАНОВКА WINDOWS](docs/INSTALL_WINDOWS.md). Публичная лицензия оригинального кода: [MIT](LICENSE), сторонние модели распространяются по отдельным условиям: [docs/PUBLIC_DISTRIBUTION.md](docs/PUBLIC_DISTRIBUTION.md).
 
 ### Важно про расположение
 
@@ -75,7 +77,7 @@ Demucs отделяет вокал, ApexSVC переносит тембр на �
 
 - Код в `research/` сохраняет исторические эксперименты. Некоторые примеры требуют своих аудио и исправления путей на новом ПК.
 - Сторонние компоненты и модели распространяются по собственным лицензиям; см. [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
-- Клонирование требует авторизации в GitHub, поскольку репозиторий **приватный**.
+- Репозиторий **публичный**, скачать исходники может любой пользователь без авторизации. Для загрузки тяжёлых моделей нужен доступ к соответствующим внешним источникам.
 - Проверка установки не равна подтверждению качества вокала: дикция, тембр и непрерывность требуют прослушивания.
 
 [Архитектура](docs/ARCHITECTURE.md) · [Лицензии](docs/THIRD_PARTY.md) · [Помощь](docs/TROUBLESHOOTING.md).

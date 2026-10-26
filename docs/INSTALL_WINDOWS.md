@@ -1,110 +1,126 @@
-# Установка HAPYCH Music Studio на другой Windows-ПК
+# HAPYCH Music Studio — полная установка на Windows
 
-## 1. Что необходимо
+Музыкальная студия доступна всем пользователям. Это исходники приложения, не готовый единый EXE. На новом компьютере сторонние AI-движки, их зависимости и модели устанавливаются отдельно из официальных источников.
 
-- Windows 10/11 x64.
-- [Git for Windows](https://git-scm.com/download/win), [uv](https://docs.astral.sh/uv/getting-started/installation/) и [FFmpeg](https://ffmpeg.org/download.html) в системном `PATH`.
-- Доступ к GitHub-аккаунту с разрешением читать **приватный** репозиторий.
-- Интернет для загрузки Python, CUDA-библиотек, исходников движков и больших моделей.
-- Желательно NVIDIA GPU с актуальными драйверами. 8 ГБ видеопамяти — ориентир для облегчённых сценариев с offload; для комфортной генерации больше памяти лучше. Отдельные операции могут работать на CPU, но значительно медленнее.
-- Десятки гигабайт диска под Python-окружения, checkpoint-модели и кэш.
+## Системные требования
 
-Проверка PowerShell:
+- Windows 10/11, **64-разрядная** версия.
+- Желательно NVIDIA GPU с 6–8 ГБ VRAM и актуальным драйвером, 16 ГБ RAM.
+- Рекомендуется 30–50 ГБ свободного места для полной установки и моделей.
+- Интернет для GitHub, Python/PyPI, PyTorch, Hugging Face и Google Drive.
+- На CPU или AMD/Intel GPU некоторые операции возможны, но медленные и не прошли полноценное испытание на всех конфигурациях.
+
+## Вариант А — установка из ZIP без Git
+
+1. Перейди на [публичный GitHub HAPYCH Music Studio](https://github.com/GUSTAVA009/hapych-music-studio).
+2. Нажми **Code → Download ZIP** или скачай ZIP из раздела Releases.
+3. Нажми по ZIP правой кнопкой → **«Извлечь всё»**. Запуск изнутри архива не поддерживается.
+4. Открой извлечённую папку `hapych-music-studio-main`.
+5. Дважды нажми `Install.cmd`. Мастер перенесёт исходники в `%USERPROFILE%\Music Studio`, установит недостающие Git, uv и FFmpeg через WinGet, затем установит ACE-Step, Seed-VC, ApexSVC и разрешённые модели.
+6. После завершения откроется `http://127.0.0.1:7870`.
+
+**Важно:** установщик не перезаписывает уже существующую папку `Music Studio`. Для обновления используй Git, предварительно сохранив свои записи.
+
+Если WinGet отсутствует, установи Git, uv, FFmpeg вручную по ссылкам ниже. Запуск `Install.cmd` не требует отдельного предварительного вызова команды `git clone`.
+
+## Вариант Б — установка через Git / PowerShell
+
+Сначала установи:
+- [Git for Windows](https://git-scm.com/download/win)
+- [uv (Astral)](https://docs.astral.sh/uv/getting-started/installation/)
+- [FFmpeg](https://ffmpeg.org/download.html)
+
+В PowerShell с установленным WinGet:
 
 ~~~powershell
-git --version
-uv --version
-ffmpeg -version
+winget install -e --id Git.Git --accept-package-agreements --accept-source-agreements
+winget install -e --id astral-sh.uv --accept-package-agreements --accept-source-agreements
+winget install -e --id Gyan.FFmpeg --accept-package-agreements --accept-source-agreements
 ~~~
 
-Если этих команд нет, сначала установи соответствующую программу и открой **новое** окно PowerShell.
+Закрой PowerShell и открой заново. Убедись, что работают `git --version`, `uv --version` и `ffmpeg -version`.
 
-## 2. Авторизация и клонирование
+Затем выполни последовательно:
 
 ~~~powershell
 git clone https://github.com/GUSTAVA009/hapych-music-studio.git "$env:USERPROFILE\Music Studio"
 Set-Location "$env:USERPROFILE\Music Studio"
-~~~
 
-GitHub может попросить авторизоваться через браузер. Это нормально: репозиторий приватный. Если на новом ПК уже существует папка `Music Studio`, сначала скопируй её на резервный диск. **Не клонируй поверх существующей студии.**
-
-## 3. Выбери набор компонентов
-
-**Основной вариант — генерация музыки, библиотека, интерфейс:**
-
-~~~powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1
-~~~
-
-**Расширенный — также Seed-VC, ApexSVC, наши голосовые оверлеи и веса ApexSVC:**
-
-~~~powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1 -Full -DownloadModels
-~~~
-
-Установщик работает только в клонированной папке `%USERPROFILE%\Music Studio`, проверяет адреса Git-репозиториев и фиксирует версии из `third_party_versions.json`.
-
-Он устанавливает:
-1. Официальный ACE-Step 1.5 + Python-окружение (через `uv sync --frozen`).
-2. Дополнительные пакеты для нашего интерфейса (в окружение ACE-Step).
-3. По флагу `-Full`: Seed-VC, кастомные модули поверх его исходников, собственное отдельное Python-окружение.
-4. По флагу `-Full`: ApexSVC с локальным патчем и отдельным окружением Python 3.10.
-5. По флагу `-DownloadModels`: официальный скрипт загрузки весов ApexSVC.
-
-**Что не скачивается автоматически:** пользовательские записи, обученные личные checkpoint-файлы, библиотека треков, некоторые внешние модели/голосовые банки OpenUtau. ACE-Step также может скачать свои веса только при первом запуске генерации.
-
-Внешние модели имеют собственные лицензии: [THIRD_PARTY.md](THIRD_PARTY.md).
-
-## 4. Проверка
-
-~~~powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Install.ps1
-~~~
-
-Для полной установки:
-
-~~~powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Install.ps1 -CheckVoice
-~~~
-
-Это **поверхностная проверка файлов, Python-импортов и синтаксиса**. Она не заменяет реальную генерацию тестового трека.
-
-## 5. Запуск интерфейса
-
-~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Install.ps1 -CheckVoice -CheckModels -Smoke
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.ps1
 ~~~
 
-Адрес UI — **http://127.0.0.1:7870**. Музыкальный движок ACE-Step работает на **http://127.0.0.1:7862** и автоматически запускается сервером по мере необходимости.
+**Упрощённая установка:** убери `-Full`, если нужны только музыка, библиотека и интерфейс. Если не использовать `-DownloadModels`, ACE-Step загружает pretrained-веса при первой генерации.
 
-На первом запуске генерации скачивание весов и первоначальная инициализация могут занять значительное время. Следи за логами `app/music-studio-stdout.log`, `app/music-studio-stderr.log` и логом Music Studio.
+## Что скачивает полная установка
 
-## 6. Собственный голос
+| Модуль | Установка и проверка |
+|---|---|
+| Python 3.11 | Автоматически через uv, отдельная среда ACE-Step |
+| ACE-Step 1.5 | Официальный Git-репозиторий, закреплённый SHA, `uv sync` |
+| ACE-Step Turbo + LM + VAE | Официальная команда `acestep-download` |
+| Сервер Music Studio | Локальная папка `app/`, порт 7870 |
+| Seed-VC | Официальный Git-репозиторий, отдельная Python-среда |
+| F0/RMVPE, CampPlus, BigVGAN, Whisper | Загружаются с Hugging Face в локальный кэш Seed-VC |
+| ApexSVC | Отдельная Python 3.10 среда, патч совместимости |
+| WavLM + генератор ApexSVC | Официальный скрипт загрузки моделей |
+| Demucs и FFmpeg | Разделение голоса и инструментальной дорожки |
+| OpenUtau и сторонние певческие банки | **Не входят** в обязательную установку, имеют собственные лицензии |
 
-Запиши чистый образец собственного голоса в WAV (предпочтительно несколько десятков секунд без музыки). Импортируй его через раздел «Мой голос». Музыкальный генератор и перенос голоса — разные этапы.
+Загрузки могут занимать десятки гигабайт. Не переименовывай папки checkpoints. Стандартный музыкальный движок запускается на `127.0.0.1:7862` и не должен открываться в интернет.
 
-- Для встроенной обработки сервер использует Seed-VC и совместимые checkpoint-файлы, которые потребуется скачать/настроить по [официальному Seed-VC](https://github.com/Plachtaa/seed-vc).
-- Для выбранного экспериментального пресета «Защита согласных» можно обработать уже готовый MP3 отдельно через ApexSVC:
+## Проверка установки
 
 ~~~powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\scripts\Convert-Track-With-MyVoice.ps1 -Source ".\Мои треки\song.mp3" -References @("C:\Audio\MyVoice.wav") -OutputWav ".\Exports\song-myvoice.wav" -Device cpu
+Set-Location "$env:USERPROFILE\Music Studio"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Install.ps1 -CheckVoice -CheckModels -Smoke
 ~~~
 
-Учитывай: модель ApexSVC использует **существующий pretrained-конвертер** и голосовую запись как образец. Она не обучается и не гарантирует совпадения тембра один в один. В UI этот QA133-пресет **не стал глобальным по умолчанию**.
+Проверяются исходники, Python-синтаксис, зависимости, Git-коммиты внешних движков, локальные файлы UI, наличие моделей и HTTP-ответ сервера. **Качество пения, русского произношения и перенос именно твоего тембра** проверяются отдельно на слух.
 
-## 7. Русская дикция и DiffSinger (эксперимент)
+После запуска создай короткий тестовый трек 15–30 секунд, прослушай MP3 и проверь экспорт WAV. Для теста переноса голоса используй только записи своего голоса или записи с разрешением владельца.
 
-В `research/` есть исходники QA119–QA136 с фонемными исправлениями «Когда», «Мне», «дождь», «мою». Для запуска OpenUtau-фонемного рендера нужно отдельно установить OpenUtau-LUNAI и совместимый голосовой банк на разрешённых автором условиях.
+## Обычный запуск
 
-**Не копируй чужие голоса из приватного репозитория:** они не приложены. Набор фонем `ru/k ru/A ru/g ru/d ru/a` относится к использовавшемуся банку Keiro и не универсален.
+~~~powershell
+Set-Location "$env:USERPROFILE\Music Studio"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-MusicStudio.ps1
+~~~
 
-## 8. Перенос своих данных со старого ПК
+Интерфейс: **http://127.0.0.1:7870**.
 
-Папки с личной библиотекой и модельными checkpoint-файлами отсутствуют на GitHub. Подробно: [MIGRATE_DATA.md](MIGRATE_DATA.md). Используй внешний диск или прямое защищённое соединение.
+## Обновление существующей установки
 
-## 9. Проблемы
+~~~powershell
+Set-Location "$env:USERPROFILE\Music Studio"
+git pull --ff-only
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1 -Full -DownloadModels
+~~~
 
-[Таблица ошибок и решений](TROUBLESHOOTING.md). Не выкладывай в issue приватные WAV, токены, .env-файлы, дампы памяти и полные пользовательские пути.
+Важные папки `Мой голос`, `Мои треки`, `Мастер WAV`, `Исходные версии`, `Voice Profiles` должны оставаться локальными и **не загружаются на GitHub**. Инструкция по переносу: [MIGRATE_DATA.md](MIGRATE_DATA.md).
 
-> Проверено: исходники клонированы и доступны в приватном репозитории, скрипты проверяются на основном ПК. **Повторное развертывание с нуля на втором Windows-компьютере ещё предстоит отдельно проверить**, а большие загрузки могут зависеть от доступности внешних источников.
+## Архивы, распаковка и защита данных
+
+Исходный ZIP содержит код, README, конфигурации и установочные скрипты, **но не личные аудио и не многогигабайтные pretrained-веса**. Автоматический тест ZIP проверяет контрольные суммы файлов, CRC, извлечение и отсутствие недопустимых путей. Это не подпись Windows и не гарантия работы всех GPU-моделей на любом устройстве.
+
+Установщик отказывается перезаписывать существующую папку Music Studio. Для проверки целостности только исходников без скачивания моделей:
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Bootstrap-Windows.ps1 -ValidateOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1 -ValidateOnly
+~~~
+
+## Типовые ошибки
+
+- `git / uv / ffmpeg не распознано`: установи программу, открой новый PowerShell и проверь переменную PATH.
+- `No pyproject.toml found`: это ошибка старого установщика `git clone --no-checkout`. Теперь исправлено. Выполни `git pull --ff-only` и снова запусти установку — ничего вручную удалять не надо.
+- `Model download failed`: проверь интернет, свободное место и доступ к Hugging Face / Google Drive.
+- `CUDA out of memory`: освободи VRAM, используй режим с offload, снизь объём модели.
+- `Voice model / checkpoint missing`: запусти установку с `-Full -DownloadModels` и проверь лицензии голосовых банков.
+
+Подробности: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+## Граница гарантий
+
+Автоматическая проверка ZIP и установщика **не означает**, что каждый компьютер способен запускать и генерировать музыку. Для очень слабых ПК или нестандартных драйверов требуется адаптация; полная проверка генерации с реальными моделями на чистом втором компьютере пока не завершена.

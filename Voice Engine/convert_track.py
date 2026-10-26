@@ -54,7 +54,7 @@ def probe_duration(path):
 def split_stems(song, destination):
     say("Отделяем голос от инструментальной дорожки...")
     execute([PYTHON, "-m", "demucs", "-n", "htdemucs", "--two-stems=vocals",
-             "-d", "cuda", "--segment", "7", "-o", destination, song],
+             "-d", ("cuda" if __import__("torch").cuda.is_available() else "cpu"), "--segment", "7", "-o", destination, song],
             label="Demucs vocal isolation")
     stems = destination / "htdemucs" / song.stem
     vocals, instrumental = stems / "vocals.wav", stems / "no_vocals.wav"

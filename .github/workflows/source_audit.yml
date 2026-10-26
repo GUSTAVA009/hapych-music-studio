@@ -1,16 +1,59 @@
-name: Source audit (manual)
+name: Windows source, installer and ZIP checks
+
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  check:
+  source-windows:
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Check source content, credentials and syntax
+      - name: Scan shipped source for personal media, secrets and syntax errors
+        shell: pwsh
         run: python tools/audit_repo.py
-      - name: Compile code without model dependencies
+      - name: Compile all published Python modules
+        shell: pwsh
         run: python -m compileall -q app "Voice Engine" tools research
+      - name: Validate Windows PowerShell installer syntax
+        shell: powershell
+        run: |
+          $errorsTotal=0
+          foreach($item in Get-ChildItem scripts -Filter '*.ps1' -File){
+            $tokens=$null; $errors=$null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($item.FullName,[ref]$tokens,[ref]$errors)
+            Write-Host "$($item.Name): $(@($errors).Count) parse errors"
+            $errorsTotal+=@($errors).Count
+          }
+          if($errorsTotal){throw "Windows PowerShell syntax errors: $errorsTotal"}
+      - name: Build ZIP, check CRC, extract and verify SHA-256 of all files
+        shell: pwsh
+        run: python tools/build_source_archive.py --output "$env:RUNNER_TEMP\HAPYCH-MusicStudio-Source.zip" --verify
+      - name: Read-only Bootstrap / Install preflight
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Bootstrap-Windows.ps1 -ValidateOnly
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install-Windows.ps1 -ValidateOnly
+          exit $LASTEXITCODE
+      - name: Regression: restore --no-checkout upstream checkout
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Installer-Recovery.ps1
+      - name: Upload source-only ZIP from passing checks
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAPYCH-MusicStudio-source-verified
+          path: ${{ runner.temp }}\HAPYCH-MusicStudio-Source.zip
+          if-no-files-found: error
+          retention-days: 14
