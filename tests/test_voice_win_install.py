@@ -39,9 +39,21 @@ class TestVoiceWindowsInstaller(unittest.TestCase):
         self.assertIn("uv sync --project $ace --frozen --inexact --python 3.11", self.installer)
         self.assertIn("uv sync --project $apex --frozen --inexact --python 3.10", self.installer)
 
-    def test_installer_checks_running_music_service_before_mutating_env(self):
-        self.assertIn("foreach($port in @(7870,7862))", self.installer)
-        self.assertIn("Close Music Studio and its ACE-Step processes before updating", self.installer)
+    def test_installer_uses_verified_process_guard_before_mutating_env(self):
+        # v0.2.6 merely blocked ANY listener on port 7862. v0.2.7 now uses
+        # ownership validation, verifies job status, and closes only idle
+        # HAPYCH processes, never arbitrary Python programs.
+        guard = (ROOT/"scripts/Close-Studio-For-Install.ps1").read_text(encoding="utf-8-sig")
+        self.assertIn("$stopHelper=Join-Path $repo 'scripts\\Close-Studio-For-Install.ps1'", self.installer)
+        self.assertIn("Invoke-Step 'Prepare idle Music Studio / ACE-Step for safe installation'", self.installer)
+        self.assertLess(self.installer.index("Prepare idle Music Studio / ACE-Step"),
+                        self.installer.index("uv python install 3.11"))
+        self.assertIn("Get-NetTCPConnection", guard)
+        self.assertIn("Get-CimInstance Win32_Process", guard)
+        self.assertIn("('idle','done','error')", guard)
+        self.assertIn("not a verified", guard)
+        self.assertIn("Read-Host", guard)
+        self.assertNotIn("Stop-Process -Name python", guard)
 
     def test_ci_has_clean_windows_package_and_no_compilation_checks(self):
         self.assertIn("dry-run", self.workflow)
