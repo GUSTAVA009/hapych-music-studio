@@ -150,6 +150,13 @@
    $("createButton").disabled=true;$("melodyGenerate").disabled=true;
    // PREPARE runs the exact routing policy before spending GPU time.
    const preview=await post("/api/prepare",data);
+   if(data.use_trained_groove_reference && preview.groove_reference?.available===false){
+    data.use_trained_groove_reference=false;
+    state.useGrooveRef=false;
+    store("studio90.grooveReference",false);
+    $("grooveReference").checked=false;
+    toast("Обученный 808-грув отсутствует. Продолжаем обычную генерацию ACE-Step без него.","error");
+   }
    if(data.use_voice&&!data.instrumental&&!preview.voice_model_preview?.trained){
     const routing=preview.voice_model_preview;
     const fallback=routing?.model||"base_SeedVC";
@@ -186,6 +193,21 @@
    status.replaceChildren(document.createElement("i"),document.createTextNode(" "+label));
    status.title=engine.message||label;
    $("settingsModel").textContent=engine.message||label;
+   if(h.groove_reference){
+    const control=$("grooveReference"),available=!!h.groove_reference.available;
+    control.disabled=!available;
+    control.title=h.groove_reference.message||"";
+    const hint=control.closest(".toggle-line")?.querySelector("small");
+    if(hint){
+     if(!hint.dataset.originalText)hint.dataset.originalText=hint.textContent;
+     hint.textContent=available?hint.dataset.originalText:"Недоступно: локальная модель groove23 не установлена. Рэп и бас 808 работают через ACE-Step без неё.";
+    }
+    if(!available && state.useGrooveRef){
+     state.useGrooveRef=false;control.checked=false;
+     store("studio90.grooveReference",false);
+     toast("Экспериментальный 808-грув отключён: отсутствует необязательная обученная модель.");
+    }
+   }
    $("settingsLastJob").textContent=String(h.job?.status||"—");
    refreshJobUI();
    if(["error","missing"].includes(engine.status)&&!["generating","converting"].includes(state.job?.status)){

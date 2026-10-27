@@ -47,6 +47,10 @@ class TestMusicStudioHTTP(unittest.TestCase):
         self.assertFalse(value["ready"])
         self.assertIn(value["engine"]["status"],("not_started","missing","error","starting"))
         self.assertNotIn("RTX 4060",str(value))
+        self.assertIn("groove_reference", value)
+        self.assertIn("available", value["groove_reference"])
+        self.assertNotIn("C:\\Users\\", str(value["groove_reference"]))
+        self.assertTrue(value["groove_reference"]["optional"])
     def test_02_prepare_unhandled_exception_is_http_json_not_failed_fetch(self):
         payload={"style":"ambient","lyrics":"[Instrumental]","instrumental":True}
         with mock.patch.object(app,"prepare_request",side_effect=RuntimeError("simulated preflight failure")), \

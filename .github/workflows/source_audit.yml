@@ -25,6 +25,9 @@ jobs:
       - name: Compile all published Python modules
         shell: pwsh
         run: python -m compileall -q app "Voice Engine" tools research tests
+      - name: 'Regression: public installation works without private groove23 weights'
+        shell: pwsh
+        run: python -X utf8 tests/test_optional_groove.py
       - name: Check production JavaScript syntax
         shell: pwsh
         run: node --check app/ui/studio42.js

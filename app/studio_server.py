@@ -26,6 +26,7 @@ for _proxy_key in ("NO_PROXY", "no_proxy"):
 import requests
 from gradio_client import Client, handle_file
 from arrangement25 import make_reference, needs_808
+from groove_preflight import availability as groove_availability
 from composer90 import compose as compose_independent
 from sound_effects29 import planned_effects, render_effects
 from voice_bridge83 import convert_song
@@ -52,6 +53,10 @@ def prepare_request(data):
     result["time_signature"] = compiled["time_signature"]
     result["warnings"].extend(compiled["warnings"])
     result["sample_reference_requested"] = compiled["style_plan"]["reference_policy"] == "trained_808"
+    result["groove_reference"] = groove_availability(Path(__file__).resolve().parent.parent)
+    if (bool(data.get("use_trained_groove_reference")) and result["sample_reference_requested"]
+            and not result["groove_reference"]["available"]):
+        result["warnings"].append(result["groove_reference"]["message"])
     result["music_key"] = key_from_brief(data.get("style", ""))
     # SFX listed only in the style field must not disappear in caption packing.
     # Route them into post-production, without duplicating cues from the lyrics.
@@ -626,6 +631,10 @@ def generate_worker(data, job_id):
                 item['voice_check_status']=measured['status']
                 item['voice_check_note']=measured.get('reason','Автоматическая проверка не выявила грубой регрессии. Естественность не подтверждена.')
         production_warnings = []
+        for take in variant_records:
+            warning = take.get("groove_reference_warning")
+            if warning and warning not in production_warnings:
+                production_warnings.append(warning)
         if prepared.get("lyric_enunciation_budget",{}).get("warning"):
             production_warnings.append(prepared["lyric_enunciation_budget"]["warning"])
         for number, item in enumerate(ready, 1):
@@ -641,6 +650,8 @@ def generate_worker(data, job_id):
             else:
                 item["sample_guided_808"] = False
             item["reference_source"] = take.get("reference_source", "none")
+            if take.get("groove_reference_warning"):
+                item["groove_reference_warning"] = take["groove_reference_warning"]
             item["automatic_minor_key_forced"] = bool(take.get("automatic_minor_key_forced"))
             if effect_requests:
                 update_job(status="converting", message="Вариант %d/%d: сводим отдельную дорожку звуковых эффектов..." % (number, len(ready)))
@@ -832,7 +843,8 @@ class Handler(BaseHTTPRequestHandler):
             connected = engine_ok()
             return self.json(200, {"ready": connected, "server_ready": True, "name": "Music Studio",
                                    "engine": engine_snapshot(connected),
-                                   "job": copy_job(), "version": "1.9", "production_patch": "win-auto-device+json-error+diagnostics",
+                                   "job": copy_job(), "groove_reference": groove_availability(ROOT),
+                                   "version": "1.10", "production_patch": "public-groove23-optional-preflight",
                                    "training23": training_reservation23.status(), "training41": training41_guard.status(),
                                    "training32": training32_guard.status(), "lyrics_busy": workflow.lyrics_active()})
         if path == "/api/diagnostics":

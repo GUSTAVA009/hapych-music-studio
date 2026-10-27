@@ -8,12 +8,16 @@ import numpy as np
 import soundfile as sf
 from scipy.signal import resample_poly,butter,sosfiltfilt
 from arrangement21 import choose_plan,catalog,select,load,needs_808
+from groove_preflight import ensure_available
 ROOT=Path.home()/'Music Studio';LIB=ROOT/'Sound Library';SR=48000
 PY=ROOT/'ACE-Step-1.5'/'.venv'/'Scripts'/'python.exe'
 
 def make_reference(style,bpm=0,key='',seed=None):
  plan=choose_plan(style,bpm,key,seed)
  if plan is None:return None
+ # This is an OPTIONAL, locally trained model excluded from public ZIPs.
+ # Preflight gives a meaningful error instead of a bare FileNotFoundError.
+ ensure_available(ROOT)
  weight=ROOT/'Training Runs'/'groove23'/'best_groove_model.pt'
  weight_hash=hashlib.sha256(weight.read_bytes()).hexdigest()
  token=hashlib.sha256((json.dumps(plan,sort_keys=True)+str(style)+weight_hash+'production24a').encode()).hexdigest()[:20]

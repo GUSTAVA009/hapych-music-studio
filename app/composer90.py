@@ -7,6 +7,7 @@ from pathlib import Path
 import hashlib,json,secrets,time
 from gradio_client import Client,handle_file
 from arrangement25 import make_reference
+from groove_preflight import availability, GrooveReferenceUnavailable
 
 ROOT=Path.home()/'Music Studio';HISTORY=ROOT/'app'/'arrangement21-history.json'
 def fresh_seeds(style,count):
@@ -34,12 +35,23 @@ def compose(settings,config,style,mode,engine_url,job_id,on_stage,client_factory
  for index,seed in enumerate(seeds,1):
   v=dict(settings);v.update({'Batch Size':1,'Random Seed':False,'Seed':str(seed),'LM Codes Hints':'','LM Temperature':.78 if index==1 else .83,'LM Batch Chunk Size':1})
   ref=None
+  groove_warning=None
   # QA90: optional, user-directed groove reference ONLY. A text request
   # for deep 808 bass is not consent to replace song conditioning with
   # an eight-bar artificial demo loop or to force an arbitrary minor key.
   optional_groove=bool(settings.get('__use_trained_groove_reference',False))
   if mode!='remix' and optional_groove and not v.get('Reference Audio') and settings.get('__style_plan',{}).get('reference_policy')=='trained_808':
-   ref=make_reference(style,v.get('BPM (Beats Per Minute)') or 0,v.get('Key',''),seed)
+   groove_state=availability(ROOT)
+   if not groove_state['available']:
+    groove_warning=groove_state['message']
+   else:
+    try:
+     ref=make_reference(style,v.get('BPM (Beats Per Minute)') or 0,v.get('Key',''),seed)
+    except (GrooveReferenceUnavailable, FileNotFoundError, OSError, RuntimeError, ValueError, ImportError) as failure:
+     groove_warning=('Экспериментальная модель 808-грува не смогла создать подложку '
+                     '('+type(failure).__name__+'). Генерация продолжается без обученного грува.')
+   if groove_warning:
+    on_stage(groove_warning)
    if ref:
     v['Reference Audio']=handle_file(ref['path']);v['Key']=ref['reference_key'];v['BPM (Beats Per Minute)']=int(round(ref['bpm']));v['Time Signature']='4'
     harmony='Key '+ref['reference_key']+'; chords '+' - '.join(c['name'] for c in ref['plan']['chords'])
@@ -116,6 +128,6 @@ def compose(settings,config,style,mode,engine_url,job_id,on_stage,client_factory
   if fingerprint in digests:raise RuntimeError('Движок вернул идентичный аудиофайл для разных seed; дубликат не принят как второй вариант.')
   digests.append(fingerprint);paths.append(audio)
   lrc=values.get('Lyrics Timestamps (Sample 1)','');lrc=lrc.get('value','') if isinstance(lrc,dict) else lrc;timestamps[index]=lrc if isinstance(lrc,str) else ''
-  record={'prompt_plan':settings.get('__style_plan',{}),'variant':index,'seed':seed,'elapsed_seconds':round(time.monotonic()-began,2),'settings':{k:value for k,value in v.items() if k not in ('Reference Audio','Source Audio')},'reference':ref,'reference_source':('explicit_groove_opt_in' if ref else 'user_supplied' if v.get('Reference Audio') else 'none'),'automatic_minor_key_forced':bool(ref),'sha256':fingerprint,'source_file':audio}
+  record={'prompt_plan':settings.get('__style_plan',{}),'variant':index,'seed':seed,'elapsed_seconds':round(time.monotonic()-began,2),'settings':{k:value for k,value in v.items() if k not in ('Reference Audio','Source Audio')},'reference':ref,'reference_source':('explicit_groove_opt_in' if ref else 'optional_groove_unavailable' if groove_warning else 'user_supplied' if v.get('Reference Audio') else 'none'),'groove_reference_warning':groove_warning,'automatic_minor_key_forced':bool(ref),'sha256':fingerprint,'source_file':audio}
   records.append(record)
  return paths,timestamps,records
