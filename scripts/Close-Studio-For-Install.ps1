@@ -70,7 +70,10 @@ function Get-HapychIdentity {
   $exe=[string]$process.ExecutablePath
   $command=[string]$process.CommandLine
   $leaf=[IO.Path]::GetFileName($exe)
-  if($leaf -notin @('python.exe','pythonw.exe','acestep.exe')){return $null}
+  # uv-managed Python on Windows is often python3.exe (not python.exe).
+  # Accept only known Python launcher names; the exact HAPYCH script path
+  # and listening-port ownership are still required independently below.
+  if($leaf -notmatch '^(python(?:w)?(?:3(?:\.\d+)?)?|acestep)\.exe$'){return $null}
   $expected=if($Port -eq $StudioPort){$studioFile}else{$aceFile}
   $pattern='(?i)(?:^|["\s])'+[regex]::Escape($expected)+'(?=$|["\s])'
   if($command -notmatch $pattern){return $null}

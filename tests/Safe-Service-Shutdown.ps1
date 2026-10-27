@@ -76,6 +76,15 @@ foreach($item in $running){Stop-HapychService -Service $item}
 if(@($script:Stopped|Sort-Object).Count -ne 2){throw 'Incorrect controlled stop count'}
 if(@($script:Stopped|Where-Object {$_ -notin @(51001,51002)}).Count){throw 'Unexpected PID stopped'}
 Write-Host 'PASS: Verified idle Music Studio + ACE-Step, only owned listener PIDs are eligible'
+# uv-managed Python on GitHub-hosted Windows runners uses python3.exe.
+$normal=$script:FakeProcesses[51002]
+$script:FakeProcesses[51002]=[pscustomobject]@{
+  ExecutablePath='C:\Python\python3.exe'
+  CommandLine=('"C:\Python\python3.exe" "'+$aceFile+'" --port '+$EnginePort)
+}
+if(@(Get-HapychServices).Count -ne 2){throw 'uv-managed python3.exe listener not recognized'}
+$script:FakeProcesses[51002]=$normal
+Write-Host 'PASS: uv-managed python3.exe executable is recognized by exact script path'
 
 # In-progress generation must never be interrupted.
 $script:Stopped=@()
