@@ -85,6 +85,12 @@ jobs:
       - name: 'Regression: Seed-VC overlays install, update, back up and protect user edits'
         shell: pwsh
         run: python -X utf8 tests/test_seed_overlays.py
+      - name: 'Regression: safe shutdown respects owned PID, active job and other applications'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Safe-Service-Shutdown.ps1
+      - name: 'Regression: live dummy Windows Studio and ACE-Step listeners can be safely closed'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\EndToEnd-Studio-Shutdown.ps1
       - name: Upload source-only ZIP from passing checks
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4

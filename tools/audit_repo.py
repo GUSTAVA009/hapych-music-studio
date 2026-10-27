@@ -60,7 +60,7 @@ for file in repo.rglob("*"):
   try:ast.parse(text)
   except SyntaxError:errors.append((str(rel),"Python syntax error"))
 required=["README.md","LICENSE","Install.cmd","Install-Music-Only.cmd","tools/verify_voice_runtime.py","tools/install_seed_overlays.py","Diagnose.cmd","scripts/Diagnose-Windows.ps1","scripts/Bootstrap-Windows.ps1","docs/INSTALL_WINDOWS.md","docs/MIGRATE_DATA.md",
- "scripts/Install-Windows.ps1","scripts/Start-MusicStudio.ps1",
+ "scripts/Install-Windows.ps1","scripts/Close-Studio-For-Install.ps1","scripts/Start-MusicStudio.ps1",
  "app/studio_server.py","app/ui/index.html",
  "overlays/apexsvc_custom.patch","third_party_versions.json",
  "presets/QA133_ConsonantProtection.json"]

@@ -87,19 +87,14 @@ Require-Command 'ffmpeg' 'https://ffmpeg.org/download.html'
 if($repo.TrimEnd('\') -ine $expected.TrimEnd('\')){
   throw "Clone to '$expected'. Some Music Studio modules expect that directory; actual: $repo"
 }
-# Never mutate Python environments while the local music server or ACE-Step
-# are running. This can crash a user's in-progress generation or corrupt DLLs.
-foreach($port in @(7870,7862)){
-  $socket=New-Object System.Net.Sockets.TcpClient
-  try{
-    $connect=$socket.BeginConnect('127.0.0.1',$port,$null,$null)
-    if($connect.AsyncWaitHandle.WaitOne(350)){
-      try{$socket.EndConnect($connect)}catch{}
-      if($socket.Connected){
-        throw "Music Studio / ACE-Step is still running on port $port. Close Music Studio and its ACE-Step processes before updating; then rerun Install.cmd. No user data has been modified."
-      }
-    }
-  }finally{$socket.Close()}
+# A previous Studio launch can leave ACE-Step listening on 7862 after
+# the browser or UI server closes. Instead of blocking all repeated installs,
+# close only verified HAPYCH-owned, idle local processes. The helper refuses
+# foreign port owners and active jobs. Orphan ACE-Step requires user consent.
+$stopHelper=Join-Path $repo 'scripts\Close-Studio-For-Install.ps1'
+if(-not(Test-Path $stopHelper)){throw 'Missing safe Music Studio process shutdown helper.'}
+Invoke-Step 'Prepare idle Music Studio / ACE-Step for safe installation' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $stopHelper -Root $repo
 }
 $env:PYTHONUTF8='1'
 $env:HF_HUB_DISABLE_XET='1'
