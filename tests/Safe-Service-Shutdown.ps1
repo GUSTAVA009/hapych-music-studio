@@ -6,7 +6,7 @@ $root=Join-Path (Split-Path $PSScriptRoot -Parent) 'scripts\Close-Studio-For-Ins
 $tok=$null;$errs=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($root,[ref]$tok,[ref]$errs)
 if(@($errs).Count){throw 'Close-Studio-For-Install.ps1 contains syntax errors'}
-$required=@('Get-HapychPortOwners','Get-HapychIdentity','Get-HapychServices',
+$required=@('Get-HapychPortOwners','Test-ExactHapychScriptArgument','Get-HapychIdentity','Get-HapychServices',
             'Assert-HapychIdle','Confirm-OrphanACE','Stop-HapychService')
 foreach($name in $required){
   $def=@($ast.FindAll({param($node)
@@ -85,6 +85,26 @@ $script:FakeProcesses[51002]=[pscustomobject]@{
 if(@(Get-HapychServices).Count -ne 2){throw 'uv-managed python3.exe listener not recognized'}
 $script:FakeProcesses[51002]=$normal
 Write-Host 'PASS: uv-managed python3.exe executable is recognized by exact script path'
+
+# Same filename and identical contents at a DIFFERENT location must never
+# pass the file-system alias check or allow termination.
+$aliasFixture=Join-Path $env:TEMP ('HAPYCH-PathIdentity-QA-'+[Guid]::NewGuid().ToString('N'))
+try{
+  $first=Join-Path $aliasFixture 'owned\app\studio_server.py'
+  $second=Join-Path $aliasFixture 'foreign\app\studio_server.py'
+  New-Item -ItemType Directory -Force (Split-Path $first -Parent),(Split-Path $second -Parent)|Out-Null
+  [IO.File]::WriteAllText($first,'EXACT SAME CONTENT',[Text.Encoding]::ASCII)
+  [IO.File]::WriteAllText($second,'EXACT SAME CONTENT',[Text.Encoding]::ASCII)
+  if(Test-ExactHapychScriptArgument -CommandLine ('"C:\Python\python3.exe" "'+$second+'"') -Expected $first){
+    throw 'An unrelated copy with identical contents was incorrectly recognized'
+  }
+  if(-not(Test-ExactHapychScriptArgument -CommandLine ('"C:\Python\python3.exe" "'+$first+'"') -Expected $first)){
+    throw 'The original installed script was not recognized'
+  }
+}finally{
+  if(Test-Path $aliasFixture){Remove-Item -LiteralPath $aliasFixture -Recurse -Force -ErrorAction SilentlyContinue}
+}
+Write-Host 'PASS: Canonical file identity distinguishes identical copies at different paths'
 
 # In-progress generation must never be interrupted.
 $script:Stopped=@()

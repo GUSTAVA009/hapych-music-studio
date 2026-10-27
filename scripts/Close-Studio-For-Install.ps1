@@ -63,6 +63,38 @@ function Test-LoopbackListener {
   return $false
 }
 
+function Test-ExactHapychScriptArgument {
+  param([string]$CommandLine,[string]$Expected)
+  # Most Windows installations use the same full string for both paths.
+  $pattern='(?i)(?:^|["\s])'+[regex]::Escape($Expected)+'(?=$|["\s])'
+  if($CommandLine -match $pattern){return $true}
+
+  # Windows CI and some user profiles expose both long and 8.3 aliases,
+  # e.g. C:\Users\runneradmin and C:\Users\RUNNER~1. A raw regex would
+  # reject the genuine same file. Compare the file-system's canonical
+  # short path only for a complete, independently parsed script argument.
+  # Never accept a substring or a different copy with matching contents.
+  $leaf=[IO.Path]::GetFileName($Expected)
+  if(-not (Test-Path -LiteralPath $Expected -PathType Leaf)){return $false}
+  $fso=$null
+  foreach($token in [regex]::Matches($CommandLine,'"([^"]+)"|(\S+)')){
+    $candidate=if($token.Groups[1].Success){$token.Groups[1].Value}else{$token.Groups[2].Value}
+    if(-not [IO.Path]::IsPathRooted($candidate)){continue}
+    if([IO.Path]::GetFileName($candidate) -ine $leaf){continue}
+    if(-not(Test-Path -LiteralPath $candidate -PathType Leaf)){continue}
+    try{
+      if($null -eq $fso){$fso=New-Object -ComObject Scripting.FileSystemObject}
+      $a=[string]$fso.GetFile($Expected).ShortPath
+      $b=[string]$fso.GetFile($candidate).ShortPath
+      if($a -and $b -and $a -ieq $b){return $true}
+    }catch{
+      Write-Verbose ("Cannot compare Windows file aliases: "+$_.Exception.GetType().Name)
+      # Fail closed if COM/short aliases are unavailable.
+    }
+  }
+  return $false
+}
+
 function Get-HapychIdentity {
   param([int]$ProcessId,[int]$Port)
   $process=Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
@@ -78,9 +110,8 @@ function Get-HapychIdentity {
     return $null
   }
   $expected=if($Port -eq $StudioPort){$studioFile}else{$aceFile}
-  $pattern='(?i)(?:^|["\s])'+[regex]::Escape($expected)+'(?=$|["\s])'
-  if($command -notmatch $pattern){
-    Write-Verbose ("Script argument mismatch on PID $ProcessId expected=$expected; exe=$exe; cmd=$command")
+  if(-not(Test-ExactHapychScriptArgument -CommandLine $command -Expected $expected)){
+    Write-Verbose ("Script path identity mismatch on PID $ProcessId expected=$expected; exe=$exe; cmd=$command")
     return $null
   }
   return [pscustomobject]@{
