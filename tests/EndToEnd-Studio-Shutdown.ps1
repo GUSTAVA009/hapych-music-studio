@@ -88,6 +88,17 @@ try{
   $ace=Run-Client $aceScript $acePort
   $check=Invoke-Helper check $studioPort $acePort
   if($check.Exit -ne 0 -or $check.Output -notmatch 'CHECK_ONLY'){
+    foreach($port in @($studioPort,$acePort)){
+      $listeners=@(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)
+      foreach($listener in $listeners){
+        $info=Get-CimInstance Win32_Process -Filter ("ProcessId = "+$listener.OwningProcess) -ErrorAction SilentlyContinue
+        Write-Host ("DIAGNOSTIC_FIXTURE_LISTENER port="+$port+" pid="+$listener.OwningProcess+
+                    " executable="+[string]$info.ExecutablePath+
+                    " cmdline="+[string]$info.CommandLine)
+      }
+    }
+    Write-Host "DIAGNOSTIC_EXPECTED_STUDIO=$studioScript"
+    Write-Host "DIAGNOSTIC_EXPECTED_ACE=$aceScript"
     throw ('Check-only failed: '+$check.Output)
   }
   if($studio.HasExited -or $ace.HasExited){throw 'Check-only accidentally stopped an active fixture'}
