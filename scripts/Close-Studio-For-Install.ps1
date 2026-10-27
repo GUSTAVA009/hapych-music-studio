@@ -73,10 +73,16 @@ function Get-HapychIdentity {
   # uv-managed Python on Windows is often python3.exe (not python.exe).
   # Accept only known Python launcher names; the exact HAPYCH script path
   # and listening-port ownership are still required independently below.
-  if($leaf -notmatch '^(python(?:w)?(?:3(?:\.\d+)?)?|acestep)\.exe$'){return $null}
+  if($leaf -notmatch '^(python(?:w)?(?:3(?:\.\d+)?)?|acestep)\.exe$'){
+    Write-Verbose ("Unrecognized executable for PID $ProcessId on $Port : $leaf")
+    return $null
+  }
   $expected=if($Port -eq $StudioPort){$studioFile}else{$aceFile}
   $pattern='(?i)(?:^|["\s])'+[regex]::Escape($expected)+'(?=$|["\s])'
-  if($command -notmatch $pattern){return $null}
+  if($command -notmatch $pattern){
+    Write-Verbose ("Script argument mismatch on PID $ProcessId expected=$expected; exe=$exe; cmd=$command")
+    return $null
+  }
   return [pscustomobject]@{
     Id=$ProcessId
     Port=$Port

@@ -66,7 +66,7 @@ function Invoke-Helper([string]$behavior,[int]$studio,[int]$ace){
   $err=Join-Path $workspace ("helper-"+$behavior+"-"+[Guid]::NewGuid().ToString('N')+".err")
   $argsList='-NoProfile -ExecutionPolicy Bypass -File "'+$helper+'" -Root "'+$fakeRoot+'" '
   $argsList+='-StudioPort '+$studio+' -EnginePort '+$ace+' -NoPrompt '
-  if($behavior -eq 'check'){$argsList+='-CheckOnly'}
+  if($behavior -eq 'check'){$argsList+='-CheckOnly -Verbose'}
   if($behavior -eq 'orphan'){$argsList+='-AllowOrphanClose'}
   $process=Start-Process -FilePath powershell.exe -ArgumentList $argsList -Wait -PassThru -NoNewWindow -RedirectStandardOutput $out -RedirectStandardError $err
   return [pscustomobject]@{
