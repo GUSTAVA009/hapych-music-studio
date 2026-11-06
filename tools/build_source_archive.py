@@ -32,6 +32,7 @@ def main() -> int:
     excluded_suffix={".wav",".mp3",".mp4",".onnx",".bin",".pt",".pth",".safetensors",".zip",".sqlite"}
     required={"Install.cmd","Install-Music-Only.cmd","Diagnose.cmd","README.md","LICENSE","app/groove_preflight.py","tools/verify_voice_runtime.py","tools/install_seed_overlays.py","scripts/Diagnose-Windows.ps1","scripts/Install-Windows.ps1",
               "scripts/Bootstrap-Windows.ps1","scripts/Close-Studio-For-Install.ps1","scripts/Verify-Install.ps1",
+              "scripts/Register-Windows.ps1","scripts/Uninstall-Windows.ps1","Uninstall.cmd","Music Studio.ico",
               "app/studio_server.py","app/ui/index.html","third_party_versions.json",
               "tools/audit_repo.py"}
     if not required.issubset(paths):raise RuntimeError("Critical files are not staged")

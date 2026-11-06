@@ -200,3 +200,8 @@ Write-Host 'Source and selected Python dependencies are installed.' -ForegroundC
 Write-Host 'On first run ACE-Step may download large pretrained models.' -ForegroundColor Yellow
 Write-Host 'Seed-VC and OpenUtau models are separate and subject to their own licenses.' -ForegroundColor Yellow
 Write-Host 'Run .\scripts\Verify-Install.ps1, then .\scripts\Start-MusicStudio.ps1'
+$registration = Join-Path $repo 'scripts\Register-Windows.ps1'
+if (-not (Test-Path -LiteralPath $registration -PathType Leaf)) { throw 'Windows shortcut and uninstall registration script is missing.' }
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $registration -Root $repo
+if ($LASTEXITCODE -ne 0) { throw 'Windows shortcuts/uninstall registration failed. Installation files were not removed.' }
+Write-Host 'Launch from Desktop/Start Menu; uninstall via Windows Settings > Installed Apps.' -ForegroundColor Green

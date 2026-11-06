@@ -46,7 +46,7 @@ if([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT){
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..')).TrimEnd('\')
 $target=if($TargetRoot){[IO.Path]::GetFullPath($TargetRoot).TrimEnd('\')}else{[IO.Path]::GetFullPath((Join-Path $HOME 'Music Studio')).TrimEnd('\')}
 if($ValidateOnly){
-  foreach($entry in @('scripts\Install-Windows.ps1','scripts\Verify-Install.ps1','app\studio_server.py','third_party_versions.json')){
+  foreach($entry in @('scripts\Install-Windows.ps1','scripts\Verify-Install.ps1','scripts\Register-Windows.ps1','scripts\Uninstall-Windows.ps1','Uninstall.cmd','Music Studio.ico','app\studio_server.py','third_party_versions.json')){
     if(-not(Test-Path (Join-Path $root $entry))){throw "Incomplete ZIP or Git checkout: $entry"}
   }
   Write-Host '[PASS] Installer archive structure validated; no files moved or installed.' -ForegroundColor Green
