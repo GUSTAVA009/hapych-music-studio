@@ -73,6 +73,9 @@ jobs:
       - name: 'Regression: restore --no-checkout upstream checkout'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Installer-Recovery.ps1
+      - name: 'Regression: existing ZIP installs gain an uninstaller without touching songs or models'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Existing-Install-Uninstall.ps1
       - name: 'Regression: Windows shortcuts, Installed apps and safe uninstall preserve user data'
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\Windows-Uninstall.ps1
